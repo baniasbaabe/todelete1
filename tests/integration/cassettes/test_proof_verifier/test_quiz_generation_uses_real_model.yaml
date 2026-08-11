@@ -1,0 +1,102 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a friendly quiz master.
+      Generate exactly one short question to verify that a user genuinely understood
+      what they claim to have learned.\nHabit: ''Read Python''\nDescription: Run 5km
+      every morning\nToday the user says they learned about: async context managers\n\nThe
+      question should test understanding of that specific topic, not recall of trivia.
+      Keep it conversational - one or two sentences. Do NOT include the answer. Respond
+      with JSON: {\"question\": \"...\"}"},{"role":"user","content":"I learned about
+      async context managers. Quiz me!"}],"model":"qwen/qwen3.6-27b","reasoning_effort":"none","response_format":{"type":"json_object"},"temperature":0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '704'
+      content-type:
+      - application/json
+      host:
+      - api.groq.com
+      user-agent:
+      - AsyncGroq/Python 1.6.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.6.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.0
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/1VSy5KbMBC85ytUc8kFHEAgHpc97zfEKSyEsLUGCSSx2HHx7xmcZbeWgyiNpnum
+        e+YBqoUKxIV7MYx9mCRZ1rQRDRktozDtOhEWSdmFZSJYGudJUZQpBGCaNyn8B/AgDEKlV0bjk7CS
+        e4mkcV6wlKasyAMYTCt7TJ8WqX9tBz2wMMmbLf9ilJAOqt8PULqVN6giBEjn+FlC9QBrevwDd045
+        z7XfMEZ7qbf6jyNMs3Rb7SNU5AivHbmb+aeVZHZKnwnXhLu7FuSJuXkycI3ENiDL5U6UI8oTYWeh
+        eE88itnQCJXk9B+2KH85EaWdl7wlpiNvs/Pk9Ay/HGGFNYDenEdrGtSg574PoFNauUuNRji0pALn
+        zQjrnwDmXRP2PMvaqwFv0SFKWUYTlscBIM8w+tqbq9TIFyfFV2zPjvFjOI3Nh934TwSl38M7iKV5
+        GhU0C8Abz/uvCiz+DO25eVZkeZqz9aPjukEp19Yselfo7ujHUKNQtHK06jmLbqyzuBBNVpaRxCnd
+        6rM10yb3uWNWTnUUX/9Oy5LSQua0edeN5c7bKaMd5jv5XBtWJjSLcf/WLWTfcTuwNWmRAgW1EgfY
+        wvrjH2Ndrki6AgAA
+    headers:
+      alt-svc:
+      - h3=":443"; ma=86400
+      cache-control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - a295a7ba3fdc2205-MUC
+      connection:
+      - keep-alive
+      content-encoding:
+      - gzip
+      content-type:
+      - application/json
+      date:
+      - Tue, 11 Aug 2026 07:51:27 GMT
+      server:
+      - cloudflare
+      strict-transport-security:
+      - max-age=15552000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - fra
+      x-ratelimit-limit-requests:
+      - '1000'
+      x-ratelimit-limit-tokens:
+      - '8000'
+      x-ratelimit-remaining-requests:
+      - '994'
+      x-ratelimit-remaining-tokens:
+      - '3880'
+      x-ratelimit-reset-requests:
+      - 8m38.4s
+      x-ratelimit-reset-tokens:
+      - 30.9s
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,159 @@
+[project]
+name = "habit-tracker"
+version = "0.1.0"
+description = "AI-powered Telegram habit tracker with Clean Architecture"
+requires-python = ">=3.13"
+dependencies = [
+    "python-telegram-bot[webhooks]",
+    "sqlalchemy[asyncio]",
+    "asyncpg",
+    "mem0ai",
+    "groq>=0.3.0",
+    "langchain",
+    "langchain-community",
+    "arize-phoenix-otel",
+    "openinference-instrumentation-groq",
+    "structlog",
+    "alembic",
+    "psycopg2-binary",
+    "python-dotenv",
+    "pydantic-settings",
+    "greenlet",
+    "certifi",
+    "tenacity",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-xdist",
+    "testcontainers[postgres]",
+    "vcrpy",
+    "prek",
+    "ruff",
+    "pre-commit",
+]
+
+[project.scripts]
+habit-tracker = "habit_tracker.presentation.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+fix = true
+line-length = 120
+indent-width = 4
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "A",    # flake8-builtins
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "PT",   # flake8-pytest-style
+    "PTH",  # flake8-use-pathlib
+    "RET",  # flake8-return
+    "PLR",  # pylint rules (refactor)
+    "PLE",  # pylint errors
+    "D",    # pydocstyle
+    "ERA",  # eradicate - catches commented out code
+    "PIE",  # flake8-pie - misc. code quality rules
+    "PL",   # pylint - general readability
+    "COM",  # flake8-commas
+    "TRY",  # flake8-try-except-raise
+    "RUF",  # Ruff-specific rules
+    "S",    # flake8-bandit - security checks
+    "SLF",  # flake8-self
+    "ISC",  # flake8-implicit-str-concat
+    "PERF", # perflint - performance anti-patterns
+    "FURB", # refurb - modernize Python code
+    "T20",  # flake8-print - find print statements
+    "ARG",  # flake8-unused-arguments
+]
+exclude = [
+    ".git",
+    ".ruff_cache",
+    ".venv",
+    "__pypackages__",
+    "__pycache__",
+    "build",
+    "dist",
+    "venv",
+    "__init__.py",
+]
+ignore = [
+    "E501",     # Line too long (handled by formatter)
+    "D203",     # 1 blank line required before class docstring (conflicts with D211)
+    "D213",     # Multi-line docstring summary should start at the second line (conflicts with D212)
+    "COM812",   # Trailing comma missing (handled by formatter)
+    "D105",     # Undocumented magic method
+    "D100",     # Missing docstring in public module
+    "D107",     # Missing docstring in __init__ method
+    "D103",     # Missing docstring in public function
+    "D102",     # Missing docstring in public method
+    "D101",     # Missing docstring in public class
+    "D401",     # First line of docstring should be in imperative mood
+    "PLR2004",  # Magic numbers
+    "PLR0913",  # Too many arguments
+    "PT011",    # pytest.raises(Exception) is too broad
+    "TRY401",   # Redundant exception object in logging call
+    "TRY003",   # try-except-raise
+    "SIM105",   # Use contextlib.suppress instead of try-except-pass
+    "S110",     # try-except-pass detected
+    "SLF001",   # Private member accessed
+    "ARG001",   # Unused function argument
+    "ARG002",   # Unused method argument (protocol/interface compliance)
+    "PLR0912",  # Too many branches
+    "ISC001",   # Implicit string concatenation (conflicts with formatter)
+    "PLW0603",  # Global statement (needed for module-level tracer singleton)
+    "PLR0911",  # Too many return statements (complex handler branching)
+    "PLR0915",  # Too many statements (complex handler branching)
+    "S101",     # Use of assert (used for type narrowing)
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.flake8-implicit-str-concat]
+allow-multiline = true
+
+[tool.ruff.lint.mccabe]
+max-complexity = 8
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+combine-as-imports = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["S101", "S106", "ARG001", "ARG002", "C901", "D", "PT004"]
+"tests/**/*.py" = ["S101", "S106", "S311", "ARG001", "ARG002", "C901", "D", "PT004", "N806"]
+"scripts/*.py" = ["T201", "S110"]
+"src/habit_tracker/presentation/main.py" = ["S104"]
+"alembic/**/*.py" = ["D", "ERA001"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = 120
+preview = true
+
+[tool.pyrefly]
+search_path = ["src", "."]
+
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -1,0 +1,329 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_infra:
+        description: Apply Azure infrastructure
+        type: boolean
+        default: true
+      deploy_app:
+        description: Build, migrate, and deploy the bot
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      infra: ${{ steps.selection.outputs.infra }}
+      app: ${{ steps.selection.outputs.app }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        if: github.event_name == 'push'
+        with:
+          filters: |
+            infra:
+              - 'infra/**'
+            app:
+              - 'src/**'
+              - 'scripts/bootstrap-db-roles.sh'
+              - 'scripts/run-migrations.sh'
+              - 'scripts/startup.sh'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - 'Dockerfile'
+              - 'alembic/**'
+
+      - name: Select deployment scope
+        id: selection
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PATH_INFRA: ${{ steps.filter.outputs.infra }}
+          PATH_APP: ${{ steps.filter.outputs.app }}
+          INPUT_INFRA: ${{ inputs.deploy_infra }}
+          INPUT_APP: ${{ inputs.deploy_app }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "infra=${INPUT_INFRA:-false}" >> "$GITHUB_OUTPUT"
+            echo "app=${INPUT_APP:-false}" >> "$GITHUB_OUTPUT"
+          else
+            echo "infra=${PATH_INFRA:-false}" >> "$GITHUB_OUTPUT"
+            echo "app=${PATH_APP:-false}" >> "$GITHUB_OUTPUT"
+          fi
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.30"
+      - run: uv sync --frozen
+      - run: uv run prek run --all-files
+
+  test-unit:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.30"
+      - run: uv sync --frozen
+      - run: uv run pytest tests/unit/ -v --tb=short
+
+  test-integration:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.30"
+      - run: uv sync --frozen
+      - run: uv run pytest tests/integration/ -v --tb=short
+        env:
+          VCR_RECORD_MODE: none
+
+  # ---------- Infrastructure ----------
+
+  deploy-infra:
+    needs: [test-unit, test-integration, changes]
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TFSTATE_STORAGE_ACCOUNT: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
+      TFSTATE_CONTAINER: ${{ vars.TFSTATE_CONTAINER || 'tofu-state' }}
+      PBKDF2_PASSPHRASE: ${{ secrets.PBKDF2_PASSPHRASE }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
+      LLM_MODEL: ${{ vars.LLM_MODEL || 'qwen/qwen3.6-27b' }}
+      LLM_TEMPERATURE: ${{ vars.LLM_TEMPERATURE || '0.2' }}
+      JINA_EMBEDDING_MODEL: ${{ vars.JINA_EMBEDDING_MODEL || 'jina-embeddings-v5-text-small' }}
+      MEM0_EMBEDDING_DIMS: ${{ vars.MEM0_EMBEDDING_DIMS || '1024' }}
+      MEM0_COLLECTION_NAME: ${{ vars.MEM0_COLLECTION_NAME || 'mem0_jina' }}
+      TERRAGRUNT_TFPATH: tofu
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_wrapper: false
+          tofu_version: 1.12.1
+      - uses: autero1/action-terragrunt@aefb0a43c4f5503a91fefb307745c4d51c26ed0e # v3.0.2
+        with:
+          terragrunt-version: 0.99.5
+      - uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate deployment configuration
+        run: |
+          required=(
+            ARM_SUBSCRIPTION_ID
+            AZURE_RESOURCE_GROUP
+            TFSTATE_STORAGE_ACCOUNT
+            PBKDF2_PASSPHRASE
+            TELEGRAM_BOT_TOKEN
+            GROQ_API_KEY
+            JINA_API_KEY
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing GitHub production configuration: $name"
+              exit 1
+            fi
+          done
+          if [[ "$LLM_MODEL" == groq/* ]]; then
+            echo "::error::LLM_MODEL must be a native Groq model ID without the groq/ prefix: $LLM_MODEL"
+            exit 1
+          fi
+          az group show --name "$AZURE_RESOURCE_GROUP" --output none
+          az storage account show \
+            --name "$TFSTATE_STORAGE_ACCOUNT" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --output none
+
+      - name: Apply all modules
+        run: |
+          cd infra/live
+          terragrunt run-all apply \
+            --terragrunt-non-interactive \
+            --terragrunt-exclude-dir postgres-firewall-deployer \
+            -auto-approve
+
+  # ---------- Application ----------
+
+  deploy-app:
+    needs: [test-unit, test-integration, changes, deploy-infra]
+    if: |
+      !cancelled() &&
+      needs.test-unit.result == 'success' &&
+      needs.test-integration.result == 'success' &&
+      needs.changes.outputs.app == 'true' &&
+      (needs.deploy-infra.result == 'success' || needs.deploy-infra.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      TFSTATE_STORAGE_ACCOUNT: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
+      TFSTATE_CONTAINER: ${{ vars.TFSTATE_CONTAINER || 'tofu-state' }}
+      PBKDF2_PASSPHRASE: ${{ secrets.PBKDF2_PASSPHRASE }}
+      TERRAGRUNT_TFPATH: tofu
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.30"
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_wrapper: false
+          tofu_version: 1.12.1
+      - uses: autero1/action-terragrunt@aefb0a43c4f5503a91fefb307745c4d51c26ed0e # v3.0.2
+        with:
+          terragrunt-version: 0.99.5
+      - uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate deployment configuration
+        run: |
+          required=(
+            ARM_SUBSCRIPTION_ID
+            AZURE_RESOURCE_GROUP
+            TFSTATE_STORAGE_ACCOUNT
+            PBKDF2_PASSPHRASE
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing GitHub production configuration: $name"
+              exit 1
+            fi
+          done
+          az group show --name "$AZURE_RESOURCE_GROUP" --output none
+
+      - name: Build and push image
+        id: image
+        run: |
+          ACR_NAME=$(cd infra/live/acr && terragrunt output -raw acr_name)
+          ACR_LOGIN=$(cd infra/live/acr && terragrunt output -raw acr_login_server)
+          az acr login --name "$ACR_NAME"
+
+          IMAGE="$ACR_LOGIN/habit-tracker-bot:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+          echo "name=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "acr_login=$ACR_LOGIN" >> "$GITHUB_OUTPUT"
+
+      - name: Open firewall for runner
+        id: firewall
+        run: |
+          RUNNER_IP=$(curl -fsSL https://api.ipify.org)
+          PG_SERVER=$(cd infra/live/postgres && terragrunt output -raw postgres_server_name)
+          RULE_NAME="gha-${{ github.run_id }}"
+
+          az postgres flexible-server firewall-rule create \
+            -g "$AZURE_RESOURCE_GROUP" -n "$PG_SERVER" \
+            --rule-name "$RULE_NAME" \
+            --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
+
+          echo "pg_server=$PG_SERVER" >> "$GITHUB_OUTPUT"
+          echo "rule_name=$RULE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Install PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes postgresql-client
+          fi
+
+      - name: Bootstrap database roles
+        run: ./scripts/bootstrap-db-roles.sh
+
+      - name: Run migrations
+        run: |
+          PG_HOST=$(cd infra/live/postgres && terragrunt output -raw postgres_fqdn)
+          PG_USER=$(cd infra/live/postgres && terragrunt output -raw postgres_admin_user)
+          PG_DATABASE=$(cd infra/live/postgres && terragrunt output -raw habit_tracker_db_name)
+          KV_NAME=$(cd infra/live/keyvault && terragrunt output -raw keyvault_name)
+          PG_PASS=$(az keyvault secret show \
+            --vault-name "$KV_NAME" --name postgres-admin-password \
+            --query value -o tsv)
+
+          export DATABASE_URL="postgresql://${PG_USER}:${PG_PASS}@${PG_HOST}:5432/${PG_DATABASE}"
+          export PGSSLMODE=verify-full
+
+          uv sync --frozen
+          ./scripts/run-migrations.sh
+
+      - name: Deploy container
+        run: |
+          WEBAPP=$(cd infra/live/web-app && terragrunt output -raw web_app_name)
+          az webapp config container set \
+            -n "$WEBAPP" -g "$AZURE_RESOURCE_GROUP" \
+            --docker-custom-image-name "${{ steps.image.outputs.name }}" \
+            --docker-registry-server-url "https://${{ steps.image.outputs.acr_login }}"
+          az webapp restart -n "$WEBAPP" -g "$AZURE_RESOURCE_GROUP"
+
+      - name: Close firewall rule
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete \
+            -g "$AZURE_RESOURCE_GROUP" \
+            -n "${{ steps.firewall.outputs.pg_server }}" \
+            --rule-name "${{ steps.firewall.outputs.rule_name }}" \
+            --yes 2>/dev/null || true
+
+      - name: Publish deployment summary
+        if: success()
+        run: |
+          WEBAPP_URL=$(cd infra/live/web-app && terragrunt output -raw web_app_url)
+          PHOENIX_URL=$(cd infra/live/phoenix && terragrunt output -raw phoenix_url)
+          {
+            echo "## Azure deployment complete"
+            echo ""
+            echo "- Web App: $WEBAPP_URL"
+            echo "- Phoenix: $PHOENIX_URL"
+            echo "- Image: ${{ steps.image.outputs.name }}"
+            echo "- Commit: ${{ github.sha }}"
+          } >> "$GITHUB_STEP_SUMMARY"
