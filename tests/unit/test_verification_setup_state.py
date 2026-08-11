@@ -75,6 +75,15 @@ def test_configured_none_ids_are_json_safe_integers() -> None:
     assert user_data[CONFIGURED_NONE_KEY] == [9]
 
 
+def test_boolean_habit_id_is_rejected() -> None:
+    user_data: dict = {}
+
+    with pytest.raises(TypeError, match="habit_id must be an integer"):
+        mark_none_configured(user_data, True)
+
+    assert CONFIGURED_NONE_KEY not in user_data
+
+
 def test_format_setup_prompt_uses_required_copy() -> None:
     assert format_setup_prompt(HabitName("Gym"), VerificationPolicy.PHOTO) == (
         'For "Gym", I recommend photo verification.\n'

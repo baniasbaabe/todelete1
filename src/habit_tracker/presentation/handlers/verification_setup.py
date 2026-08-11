@@ -68,6 +68,9 @@ def is_setup_cancel(choice: str) -> bool:
 
 def mark_none_configured(user_data: dict, habit_id: int) -> None:
     """Record that a habit's explicit no-verification choice was configured."""
+    if not isinstance(habit_id, int) or isinstance(habit_id, bool):
+        raise TypeError("habit_id must be an integer")
+
     habit_ids = _configured_none_ids(user_data)
     if habit_id not in habit_ids:
         habit_ids.append(habit_id)
