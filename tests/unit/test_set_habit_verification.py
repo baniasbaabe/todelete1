@@ -13,9 +13,7 @@ async def test_updates_owned_active_habit() -> None:
     habits = InMemoryHabitRepository()
     await RegisterUser(users).execute(TelegramId(111))
     habit = await CreateHabit(users, habits).execute(TelegramId(111), HabitName("Gym"))
-    updated = await SetHabitVerification(users, habits).execute(
-        TelegramId(111), habit.id, VerificationPolicy.PHOTO
-    )
+    updated = await SetHabitVerification(users, habits).execute(TelegramId(111), habit.id, VerificationPolicy.PHOTO)
     assert updated.verification_policy is VerificationPolicy.PHOTO
     assert (await habits.find_by_id(habit.id)).verification_policy is VerificationPolicy.PHOTO
 
@@ -27,9 +25,7 @@ async def test_rejects_habit_owned_by_another_user() -> None:
     await RegisterUser(users).execute(TelegramId(222))
     habit = await CreateHabit(users, habits).execute(TelegramId(222), HabitName("Gym"))
     with pytest.raises(HabitNotFoundError):
-        await SetHabitVerification(users, habits).execute(
-            TelegramId(111), habit.id, VerificationPolicy.PHOTO
-        )
+        await SetHabitVerification(users, habits).execute(TelegramId(111), habit.id, VerificationPolicy.PHOTO)
 
 
 async def test_rejects_missing_user() -> None:
@@ -56,6 +52,4 @@ async def test_rejects_inactive_habit() -> None:
     habit.deactivate()
     await habits.save(habit)
     with pytest.raises(HabitNotFoundError):
-        await SetHabitVerification(users, habits).execute(
-            TelegramId(111), habit.id, VerificationPolicy.PHOTO
-        )
+        await SetHabitVerification(users, habits).execute(TelegramId(111), habit.id, VerificationPolicy.PHOTO)

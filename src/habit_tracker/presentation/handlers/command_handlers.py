@@ -71,7 +71,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 @trace("add_habit", handler="add_habit")
 async def add_habit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message or not update.effective_user or not update.message.text:
+    if not update.message or not update.effective_user or not update.message.text or context.user_data is None:
         return
     args = update.message.text.split(maxsplit=1)
     if len(args) < 2:

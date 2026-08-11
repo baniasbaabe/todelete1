@@ -12,9 +12,7 @@ class SetHabitVerification:
         self._user_repo = user_repo
         self._habit_repo = habit_repo
 
-    async def execute(
-        self, telegram_id: TelegramId, habit_id: int, policy: VerificationPolicy
-    ) -> Habit:
+    async def execute(self, telegram_id: TelegramId, habit_id: int, policy: VerificationPolicy) -> Habit:
         user = await self._user_repo.find_by_telegram_id(telegram_id)
         if user is None or user.id is None:
             raise UserNotFoundError(f"User with telegram_id {telegram_id.value} not found")

@@ -100,6 +100,15 @@ async def test_add_without_verify_waits_for_confirmation(env) -> None:
     assert env.recommender.names == ["Gym"]
 
 
+async def test_add_without_user_data_is_ignored(env) -> None:
+    env.context.user_data = None
+
+    await add_habit_handler(update_for("/add_habit Gym"), env.context)
+
+    assert await env.habits.find_active_by_user(env.user.id) == []
+    assert env.recommender.names == []
+
+
 async def test_yes_creates_with_recommended_policy(env) -> None:
     await add_habit_handler(update_for("/add_habit Gym"), env.context)
 
