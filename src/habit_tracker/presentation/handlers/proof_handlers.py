@@ -21,6 +21,7 @@ from habit_tracker.presentation.formatters import (
 from habit_tracker.presentation.handlers.session_store import clear_session, load_session, save_session
 from habit_tracker.presentation.handlers.verification_setup import (
     clear_pending_setup,
+    format_checkin_setup_prompt,
     format_setup_prompt,
     is_setup_cancel,
     load_pending_setup,
@@ -173,7 +174,7 @@ async def text_response_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
         policy = parse_setup_choice(update.message.text, recommendation)
         if policy is None:
-            await update.message.reply_text(format_setup_prompt(habit.name, recommendation))
+            await update.message.reply_text(format_checkin_setup_prompt(habit.name, recommendation))
             return
 
         if habit.id is None:

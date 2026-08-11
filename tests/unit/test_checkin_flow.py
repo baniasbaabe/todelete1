@@ -269,7 +269,10 @@ class TestCheckinFlow:
         session = env.context.user_data["checkin_session"]
         assert session["state"] == "awaiting_verification_setup"
         assert session["verification_recommendation"] == "photo"
-        assert "recommend photo" in update.message.reply_text.await_args.args[0].lower()
+        prompt = update.message.reply_text.await_args.args[0].lower()
+        assert "recommend photo" in prompt
+        assert "'skip'" in prompt
+        assert "'cancel'" not in prompt
 
     async def test_selecting_recommended_photo_updates_without_advancing(self, env) -> None:
         await _seed(env, policy=VerificationPolicy.NONE, configured_none=False)
@@ -317,7 +320,10 @@ class TestCheckinFlow:
         assert session["state"] == "awaiting_verification_setup"
         assert session["current_index"] == 0
         assert session["verification_recommendation"] == "photo"
-        assert "recommend photo" in reply.message.reply_text.await_args.args[0].lower()
+        prompt = reply.message.reply_text.await_args.args[0].lower()
+        assert "recommend photo" in prompt
+        assert "'skip'" in prompt
+        assert "'cancel'" not in prompt
         env.uow_session.commit.assert_not_awaited()
 
     async def test_skip_during_setup_advances_without_configuring_habit(self, env) -> None:
@@ -351,7 +357,10 @@ class TestCheckinFlow:
         assert session["verification_recommendation"] == "photo"
         assert env.recommender.names == ["gym"]
         assert "active check-in" in resumed.message.reply_text.await_args.args[0].lower()
-        assert "recommend photo" in resumed.message.reply_text.await_args.args[0].lower()
+        prompt = resumed.message.reply_text.await_args.args[0].lower()
+        assert "recommend photo" in prompt
+        assert "'skip'" in prompt
+        assert "'cancel'" not in prompt
 
     async def test_setup_update_failure_leaves_current_habit_pending(self, env, monkeypatch) -> None:
         await _seed(env, policy=VerificationPolicy.NONE, configured_none=False)
@@ -385,7 +394,10 @@ class TestCheckinFlow:
         assert len(session["results"]) == 1
         assert second.id is not None
         assert not is_none_configured(env.context.user_data, second.id)
-        assert "recommend photo" in advance.message.reply_text.await_args.args[0].lower()
+        prompt = advance.message.reply_text.await_args.args[0].lower()
+        assert "recommend photo" in prompt
+        assert "'skip'" in prompt
+        assert "'cancel'" not in prompt
 
     async def test_legacy_photo_setup_continues_to_proof_without_completion(self, env) -> None:
         await _seed(env, policy=VerificationPolicy.NONE, configured_none=False)

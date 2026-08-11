@@ -94,6 +94,15 @@ def format_setup_prompt(name: HabitName, recommendation: VerificationPolicy) -> 
     )
 
 
+def format_checkin_setup_prompt(name: HabitName, recommendation: VerificationPolicy) -> str:
+    """Format verification setup for an active check-in."""
+    return (
+        f'For "{name.value}", I recommend {recommendation.value} verification.\n'
+        "Reply 'yes' to use it, or choose: photo, quiz, text, none.\n"
+        "Reply 'skip' to skip this habit."
+    )
+
+
 async def prepare_current_habit(
     session: CheckinSession,
     recommender: VerificationRecommender,
@@ -112,7 +121,7 @@ async def prepare_current_habit(
         if session.verification_recommendation is None:
             session.verification_recommendation = await recommender.recommend(habit.name)
         session.state = SessionState.AWAITING_VERIFICATION_SETUP
-        return format_setup_prompt(habit.name, session.verification_recommendation)
+        return format_checkin_setup_prompt(habit.name, session.verification_recommendation)
     session.state = SessionState.AWAITING_RESPONSE
     session.verification_recommendation = None
     return format_checkin_prompt(habit)

@@ -93,7 +93,10 @@ async def test_add_without_verify_waits_for_confirmation(env) -> None:
         "name": "Gym",
         "recommendation": "photo",
     }
-    assert "recommend photo" in command.message.reply_text.await_args.args[0].lower()
+    prompt = command.message.reply_text.await_args.args[0].lower()
+    assert "recommend photo" in prompt
+    assert "'cancel'" in prompt
+    assert "'skip'" not in prompt
     assert env.recommender.names == ["Gym"]
 
 
