@@ -189,7 +189,11 @@ async def test_explicit_verify_bypasses_recommender_and_creates_immediately(env)
 
 
 async def test_active_checkin_handles_text_before_pending_setup(env) -> None:
-    await CreateHabit(env.users, env.habits).execute(TelegramId(TELEGRAM_ID), HabitName("Gym"))
+    await CreateHabit(env.users, env.habits).execute(
+        TelegramId(TELEGRAM_ID),
+        HabitName("Gym"),
+        verification_policy=VerificationPolicy.TEXT,
+    )
     await add_habit_handler(update_for("/add_habit Read"), env.context)
     await checkin_handler(update_for("/checkin"), env.context)
     reply = update_for("maybe")

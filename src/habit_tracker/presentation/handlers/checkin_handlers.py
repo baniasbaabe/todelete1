@@ -9,22 +9,25 @@ from habit_tracker.domain.exceptions import UserNotFoundError
 from habit_tracker.domain.value_objects import TelegramId
 from habit_tracker.infrastructure.observability.tracing import trace
 from habit_tracker.presentation.dependencies import dependencies
-from habit_tracker.presentation.formatters import format_checkin_prompt
 from habit_tracker.presentation.handlers.session_store import load_session, save_session
+from habit_tracker.presentation.handlers.verification_setup import prepare_current_habit
 
 
 @trace("checkin", handler="checkin")
 async def checkin_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Start a check-in session."""
-    if not update.message or not update.effective_user:
+    if not update.message or not update.effective_user or context.user_data is None:
         return
     deps = dependencies(context)
+    user_data = context.user_data
 
     existing = load_session(context)
     if existing:
         habit = existing.current_habit()
         if habit:
-            await update.message.reply_text(f"You have an active check-in.\n\n{format_checkin_prompt(habit)}")
+            prompt = await prepare_current_habit(existing, deps.verification_recommender, user_data)
+            save_session(context, existing)
+            await update.message.reply_text(f"You have an active check-in.\n\n{prompt}")
             return
 
     try:
@@ -42,9 +45,10 @@ async def checkin_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             user_id=result.user_id,
             habits=result.pending,
         )
+        prompt = await prepare_current_habit(session, deps.verification_recommender, user_data)
         save_session(context, session)
 
-        await update.message.reply_text(f"{result.coaching}\n\n{format_checkin_prompt(result.pending[0])}")
+        await update.message.reply_text(f"{result.coaching}\n\n{prompt}")
 
     except UserNotFoundError:
         await update.message.reply_text("Please /start first.")

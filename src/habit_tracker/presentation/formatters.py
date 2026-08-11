@@ -39,5 +39,10 @@ def format_checkin_prompt(habit: Habit) -> str:
     return f"Did you complete '{habit.name.value}'? (yes/skip)"
 
 
+def format_verification_setup_complete(habit: Habit) -> str:
+    """Confirm a verification choice and continue with the normal prompt."""
+    return f"Verification set to {habit.verification_policy.value}.\n\n{format_checkin_prompt(habit)}"
+
+
 def format_checkin_summary(summary: CompletionSummary) -> str:
     return f"Check-in complete! {summary.completed}/{summary.total} habits done.\n{summary.get_encouragement()}"

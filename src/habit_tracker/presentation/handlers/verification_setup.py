@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from habit_tracker.application.checkin_session import CheckinSession, SessionState
+from habit_tracker.application.ports.ai_services import VerificationRecommender
 from habit_tracker.domain.value_objects import HabitName, VerificationPolicy
+from habit_tracker.presentation.formatters import format_checkin_prompt
 
 PENDING_HABIT_KEY = "pending_habit_setup"
 CONFIGURED_NONE_KEY = "configured_none_habit_ids"
@@ -89,6 +92,30 @@ def format_setup_prompt(name: HabitName, recommendation: VerificationPolicy) -> 
         "Reply 'yes' to use it, or choose: photo, quiz, text, none.\n"
         "Reply 'cancel' to stop."
     )
+
+
+async def prepare_current_habit(
+    session: CheckinSession,
+    recommender: VerificationRecommender,
+    user_data: dict,
+) -> str:
+    """Prepare the current habit's setup or normal check-in prompt."""
+    habit = session.current_habit()
+    if habit is None:
+        return ""
+    needs_setup = (
+        habit.verification_policy is VerificationPolicy.NONE
+        and habit.id is not None
+        and not is_none_configured(user_data, habit.id)
+    )
+    if needs_setup:
+        if session.verification_recommendation is None:
+            session.verification_recommendation = await recommender.recommend(habit.name)
+        session.state = SessionState.AWAITING_VERIFICATION_SETUP
+        return format_setup_prompt(habit.name, session.verification_recommendation)
+    session.state = SessionState.AWAITING_RESPONSE
+    session.verification_recommendation = None
+    return format_checkin_prompt(habit)
 
 
 def _configured_none_ids(user_data: dict) -> list[int]:

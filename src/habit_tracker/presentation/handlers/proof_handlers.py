@@ -6,13 +6,18 @@ from telegram.ext import ContextTypes
 from habit_tracker.application.checkin_session import CheckinSession, SessionState
 from habit_tracker.application.use_cases.create_habit import CreateHabit
 from habit_tracker.application.use_cases.record_checkin_insight import RecordCheckinInsight
+from habit_tracker.application.use_cases.set_habit_verification import SetHabitVerification
 from habit_tracker.application.use_cases.verify_and_complete import VerifyAndComplete, VerifyAndCompleteResult
-from habit_tracker.domain.exceptions import HabitAlreadyExistsError, UserNotFoundError
+from habit_tracker.domain.exceptions import HabitAlreadyExistsError, HabitNotFoundError, UserNotFoundError
 from habit_tracker.domain.value_objects.telegram_id import TelegramId
 from habit_tracker.domain.value_objects.verification_policy import VerificationPolicy
 from habit_tracker.infrastructure.observability.tracing import trace
 from habit_tracker.presentation.dependencies import dependencies
-from habit_tracker.presentation.formatters import format_checkin_prompt, format_checkin_summary
+from habit_tracker.presentation.formatters import (
+    format_checkin_prompt,
+    format_checkin_summary,
+    format_verification_setup_complete,
+)
 from habit_tracker.presentation.handlers.session_store import clear_session, load_session, save_session
 from habit_tracker.presentation.handlers.verification_setup import (
     clear_pending_setup,
@@ -21,6 +26,7 @@ from habit_tracker.presentation.handlers.verification_setup import (
     load_pending_setup,
     mark_none_configured,
     parse_setup_choice,
+    prepare_current_habit,
 )
 
 AFFIRMATIVE = ("yes", "y", "done", "completed")
@@ -29,15 +35,16 @@ NEGATIVE = ("no", "n")
 
 async def _handle_pending_habit_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Handle a verification choice after confirming no check-in is active."""
-    if not update.message or not update.effective_user or update.message.text is None:
+    if not update.message or not update.effective_user or update.message.text is None or context.user_data is None:
         return False
 
-    setup = load_pending_setup(context.user_data)
+    user_data = context.user_data
+    setup = load_pending_setup(user_data)
     if setup is None:
         return False
 
     if is_setup_cancel(update.message.text):
-        clear_pending_setup(context.user_data)
+        clear_pending_setup(user_data)
         await update.message.reply_text("Habit setup cancelled.")
         return True
 
@@ -55,8 +62,8 @@ async def _handle_pending_habit_setup(update: Update, context: ContextTypes.DEFA
             )
             await uow.commit()
         if policy is VerificationPolicy.NONE and habit.id is not None:
-            mark_none_configured(context.user_data, habit.id)
-        clear_pending_setup(context.user_data)
+            mark_none_configured(user_data, habit.id)
+        clear_pending_setup(user_data)
         await update.message.reply_text(f"Habit '{habit.name.value}' created with {policy.value} verification.")
     except UserNotFoundError:
         await update.message.reply_text("Please /start first.")
@@ -91,6 +98,9 @@ async def _advance_and_reply(
     label: str,
 ) -> None:
     """Move past the current habit, persist session state, and reply."""
+    user_data = context.user_data
+    if user_data is None:
+        return
     next_habit = session.advance()
 
     if next_habit is None:
@@ -99,8 +109,13 @@ async def _advance_and_reply(
         await message.reply_text(f"{label}\n\n{format_checkin_summary(session.get_summary())}")
         return
 
+    prompt = await prepare_current_habit(
+        session,
+        dependencies(context).verification_recommender,
+        user_data,
+    )
     save_session(context, session)
-    await message.reply_text(f"{label}\n\n{format_checkin_prompt(next_habit)}")
+    await message.reply_text(f"{label}\n\n{prompt}")
 
 
 async def _advance_after_verification(
@@ -126,8 +141,9 @@ async def _advance_after_verification(
 @trace("text_response", handler="text_response")
 async def text_response_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle text responses during check-in."""
-    if not update.message or not update.effective_user or update.message.text is None:
+    if not update.message or not update.effective_user or update.message.text is None or context.user_data is None:
         return
+    user_data = context.user_data
 
     session = load_session(context)
     if session is None:
@@ -146,6 +162,44 @@ async def text_response_handler(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     deps = dependencies(context)
+
+    if session.state == SessionState.AWAITING_VERIFICATION_SETUP:
+        recommendation = session.verification_recommendation
+        if recommendation is None:
+            prompt = await prepare_current_habit(session, deps.verification_recommender, user_data)
+            save_session(context, session)
+            await update.message.reply_text(prompt)
+            return
+
+        policy = parse_setup_choice(update.message.text, recommendation)
+        if policy is None:
+            await update.message.reply_text(format_setup_prompt(habit.name, recommendation))
+            return
+
+        if habit.id is None:
+            await update.message.reply_text("Could not update verification. Please try again.")
+            return
+
+        try:
+            async with deps.unit_of_work() as uow:
+                updated_habit = await SetHabitVerification(uow.users, uow.habits).execute(
+                    TelegramId(update.effective_user.id),
+                    habit.id,
+                    policy,
+                )
+                await uow.commit()
+        except (HabitNotFoundError, UserNotFoundError, ValueError):
+            await update.message.reply_text("Could not update verification. Please try again.")
+            return
+
+        session.habits[session.current_index] = updated_habit
+        if policy is VerificationPolicy.NONE and updated_habit.id is not None:
+            mark_none_configured(user_data, updated_habit.id)
+        session.verification_recommendation = None
+        session.state = SessionState.AWAITING_RESPONSE
+        save_session(context, session)
+        await update.message.reply_text(format_verification_setup_complete(updated_habit))
+        return
 
     if session.state == SessionState.AWAITING_PROOF:
         async with deps.unit_of_work() as uow:
