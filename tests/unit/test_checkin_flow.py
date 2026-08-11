@@ -18,10 +18,11 @@ from unittest.mock import AsyncMock
 import pytest
 from telegram.ext import ApplicationBuilder
 
-from habit_tracker.application.checkin_session import TTL_HOURS
+from habit_tracker.application.checkin_session import TTL_HOURS, CheckinSession
 from habit_tracker.application.use_cases.create_habit import CreateHabit
 from habit_tracker.application.use_cases.record_checkin_insight import INSIGHT_CATEGORY
 from habit_tracker.application.use_cases.register_user import RegisterUser
+from habit_tracker.domain.entities.habit import Habit
 from habit_tracker.domain.value_objects import HabitName, TelegramId
 from habit_tracker.domain.value_objects.verification_policy import VerificationPolicy
 from habit_tracker.infrastructure.database.unit_of_work import UnitOfWork
@@ -362,9 +363,77 @@ class TestCheckinFlow:
         assert "'skip'" in prompt
         assert "'cancel'" not in prompt
 
+    async def test_reissuing_checkin_preserves_awaiting_photo_proof(self, env) -> None:
+        await _seed(env, policy=VerificationPolicy.PHOTO)
+        await checkin_handler(_update(), env.context)
+        await text_response_handler(_update("yes"), env.context)
+        resumed = _update()
+
+        await checkin_handler(resumed, env.context)
+
+        assert env.context.user_data["checkin_session"]["state"] == "awaiting_proof"
+        prompt = resumed.message.reply_text.await_args.args[0].lower()
+        assert "active check-in" in prompt
+        assert "send your photo proof" in prompt
+
+    async def test_reissuing_checkin_preserves_awaiting_quiz_topic(self, env) -> None:
+        await _seed(env, policy=VerificationPolicy.QUIZ)
+        await checkin_handler(_update(), env.context)
+        await text_response_handler(_update("yes"), env.context)
+        resumed = _update()
+
+        await checkin_handler(resumed, env.context)
+
+        assert env.context.user_data["checkin_session"]["state"] == "awaiting_quiz_topic"
+        prompt = resumed.message.reply_text.await_args.args[0].lower()
+        assert "active check-in" in prompt
+        assert "what did you learn about today" in prompt
+
+    async def test_reissuing_checkin_preserves_awaiting_quiz_answer(self, env) -> None:
+        await _seed(env, policy=VerificationPolicy.QUIZ)
+        await checkin_handler(_update(), env.context)
+        await text_response_handler(_update("yes"), env.context)
+        await text_response_handler(_update("overfitting"), env.context)
+        resumed = _update()
+
+        await checkin_handler(resumed, env.context)
+
+        session = env.context.user_data["checkin_session"]
+        assert session["state"] == "awaiting_quiz_answer"
+        assert session["quiz_question"] == "What is 2+2?"
+        prompt = resumed.message.reply_text.await_args.args[0].lower()
+        assert "active check-in" in prompt
+        assert "what is 2+2?" in prompt
+
+    async def test_old_awaiting_response_none_session_is_migrated_before_yes(self, env) -> None:
+        user = await _seed(env, policy=VerificationPolicy.NONE, configured_none=False)
+        habits = await env.habits.find_active_by_user(user.id)
+        old_session = CheckinSession.start(user.id, habits).to_dict()
+        old_session.pop("verification_recommendation")
+        env.context.user_data["checkin_session"] = old_session
+        reply = _update("yes")
+
+        await text_response_handler(reply, env.context)
+
+        session = env.context.user_data["checkin_session"]
+        habit_id = session["habits"][0]["id"]
+        assert session["state"] == "awaiting_verification_setup"
+        assert session["verification_recommendation"] == "photo"
+        assert session["results"] == []
+        assert await env.completions.find_today_by_habits([habit_id]) == []
+        assert "recommend photo" in reply.message.reply_text.await_args.args[0].lower()
+
     async def test_setup_update_failure_leaves_current_habit_pending(self, env, monkeypatch) -> None:
         await _seed(env, policy=VerificationPolicy.NONE, configured_none=False)
         await checkin_handler(_update(), env.context)
+        habit_id = env.context.user_data["checkin_session"]["habits"][0]["id"]
+        find_stored = env.habits.find_by_id
+
+        async def find_copy(candidate_id: int) -> Habit | None:
+            habit = await find_stored(candidate_id)
+            return deepcopy(habit)
+
+        monkeypatch.setattr(env.habits, "find_by_id", find_copy)
         monkeypatch.setattr(env.habits, "save", AsyncMock(side_effect=ValueError("write failed")))
         reply = _update("photo")
 
@@ -375,6 +444,9 @@ class TestCheckinFlow:
         assert session["current_index"] == 0
         assert session["habits"][0]["verification_policy"] == "none"
         assert session["results"] == []
+        stored = await find_stored(habit_id)
+        assert stored is not None
+        assert stored.verification_policy is VerificationPolicy.NONE
         env.uow_session.commit.assert_not_awaited()
         assert "could not update verification" in reply.message.reply_text.await_args.args[0].lower()
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import structlog
 
 from habit_tracker.application.ports.ai_services import VerificationRecommender
@@ -9,6 +11,7 @@ from habit_tracker.domain.value_objects.verification_policy import VerificationP
 from habit_tracker.infrastructure.ai.llm_client import LLMClient
 
 logger = structlog.get_logger()
+RECOMMENDATION_TIMEOUT_SECONDS = 5.0
 
 
 class LLMVerificationRecommender:
@@ -33,18 +36,33 @@ class LLMVerificationRecommender:
             ],
             temperature=0.0,
         )
-        return VerificationPolicy(str(result["verification_policy"]).casefold())
+        if not isinstance(result, dict):
+            raise TypeError("Verification recommendation must be an object")
+        if "verification_policy" not in result:
+            raise KeyError("verification_policy")
+        if set(result) != {"verification_policy"}:
+            raise ValueError("Verification recommendation must contain exactly one policy field")
+        policy = result["verification_policy"]
+        if not isinstance(policy, str):
+            raise TypeError("Verification recommendation policy must be a string")
+        return VerificationPolicy(policy.casefold())
 
 
 class SafeVerificationRecommender:
     """Return a deterministic recommendation when the provider cannot respond."""
 
-    def __init__(self, delegate: VerificationRecommender) -> None:
+    def __init__(
+        self,
+        delegate: VerificationRecommender,
+        timeout_seconds: float = RECOMMENDATION_TIMEOUT_SECONDS,
+    ) -> None:
         self._delegate = delegate
+        self._timeout_seconds = timeout_seconds
 
     async def recommend(self, habit_name: HabitName) -> VerificationPolicy:
         try:
-            return await self._delegate.recommend(habit_name)
+            async with asyncio.timeout(self._timeout_seconds):
+                return await self._delegate.recommend(habit_name)
         except Exception:
             logger.exception("verification_recommendation_failed")
             return fallback_policy(habit_name)

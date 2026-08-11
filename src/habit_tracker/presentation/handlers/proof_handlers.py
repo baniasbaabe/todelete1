@@ -26,6 +26,7 @@ from habit_tracker.presentation.handlers.verification_setup import (
     is_setup_cancel,
     load_pending_setup,
     mark_none_configured,
+    needs_verification_setup,
     parse_setup_choice,
     prepare_current_habit,
 )
@@ -234,6 +235,12 @@ async def text_response_handler(update: Update, context: ContextTypes.DEFAULT_TY
     if text in NEGATIVE:
         session.record_skip()
         await _advance_and_reply(session, context, update.message, "Okay.")
+        return
+
+    if session.state is SessionState.AWAITING_RESPONSE and needs_verification_setup(habit, user_data):
+        prompt = await prepare_current_habit(session, deps.verification_recommender, user_data)
+        save_session(context, session)
+        await update.message.reply_text(prompt)
         return
 
     if text in AFFIRMATIVE:

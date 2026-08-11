@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from habit_tracker.application.checkin_session import CheckinSession, SessionState
 from habit_tracker.application.ports.ai_services import VerificationRecommender
+from habit_tracker.domain.entities.habit import Habit
 from habit_tracker.domain.value_objects import HabitName, VerificationPolicy
 from habit_tracker.presentation.formatters import format_checkin_prompt
 
@@ -103,6 +104,15 @@ def format_checkin_setup_prompt(name: HabitName, recommendation: VerificationPol
     )
 
 
+def needs_verification_setup(habit: Habit, user_data: dict) -> bool:
+    """Return whether a legacy no-verification habit still needs confirmation."""
+    return (
+        habit.verification_policy is VerificationPolicy.NONE
+        and habit.id is not None
+        and not is_none_configured(user_data, habit.id)
+    )
+
+
 async def prepare_current_habit(
     session: CheckinSession,
     recommender: VerificationRecommender,
@@ -112,12 +122,18 @@ async def prepare_current_habit(
     habit = session.current_habit()
     if habit is None:
         return ""
-    needs_setup = (
-        habit.verification_policy is VerificationPolicy.NONE
-        and habit.id is not None
-        and not is_none_configured(user_data, habit.id)
-    )
-    if needs_setup:
+
+    if session.state is SessionState.AWAITING_PROOF:
+        return f"Please send your {habit.verification_policy.value} proof:"
+    if session.state is SessionState.AWAITING_QUIZ_TOPIC:
+        return "Nice! What did you learn about today?"
+    if session.state is SessionState.AWAITING_QUIZ_ANSWER:
+        if session.quiz_question is not None:
+            return f"Quick quiz time!\n\n{session.quiz_question}"
+        session.state = SessionState.AWAITING_QUIZ_TOPIC
+        return "Nice! What did you learn about today?"
+
+    if needs_verification_setup(habit, user_data):
         if session.verification_recommendation is None:
             session.verification_recommendation = await recommender.recommend(habit.name)
         session.state = SessionState.AWAITING_VERIFICATION_SETUP

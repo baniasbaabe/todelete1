@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Generator
+import json
 from pathlib import Path
 from uuid import uuid4
 
@@ -132,9 +133,26 @@ def vcr_config() -> VCR:
     CASSETTE_DIR.mkdir(exist_ok=True)
     return vcrpy.VCR(
         cassette_library_dir=str(CASSETTE_DIR),
-        filter_headers=["authorization", "api-key", "x-api-key"],
+        filter_headers=[
+            "authorization",
+            "api-key",
+            "x-api-key",
+            "accept-encoding",
+            "content-length",
+            "user-agent",
+            "x-stainless-arch",
+            "x-stainless-async",
+            "x-stainless-lang",
+            "x-stainless-os",
+            "x-stainless-package-version",
+            "x-stainless-read-timeout",
+            "x-stainless-retry-count",
+            "x-stainless-runtime",
+            "x-stainless-runtime-version",
+        ],
         filter_query_parameters=["key", "api_key"],
         before_record_response=_scrub_provider_response,
+        decode_compressed_response=True,
         ignore_hosts=["localhost", "127.0.0.1", "unix", "docker"],
         record_mode="none",
         match_on=["method", "scheme", "host", "port", "path", "body"],
@@ -175,8 +193,38 @@ def _discard_if_the_api_refused_us(path: Path, recorded: Cassette) -> None:
 
 
 def _scrub_provider_response(response: dict) -> dict:
-    """Remove provider account and request identifiers from recordings."""
-    headers = response.get("headers", {})
-    private_headers = {"set-cookie", "x-request-id"}
-    response["headers"] = {name: value for name, value in headers.items() if name.lower() not in private_headers}
+    """Remove volatile provider metadata while preserving replay behavior."""
+    response["headers"] = {
+        name: value for name, value in response.get("headers", {}).items() if name.lower() == "content-type"
+    }
+
+    body = response.get("body", {})
+    raw = body.get("string")
+    if not isinstance(raw, (bytes, str)):
+        return response
+
+    try:
+        payload = json.loads(raw)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return response
+    if not isinstance(payload, dict) or payload.get("object") != "chat.completion":
+        return response
+
+    payload["id"] = "chatcmpl-vcr"
+    payload["created"] = 0
+    payload["system_fingerprint"] = "fp_vcr"
+    payload.pop("service_tier", None)
+
+    groq_metadata = payload.get("x_groq")
+    if isinstance(groq_metadata, dict):
+        groq_metadata["id"] = "req_vcr"
+        groq_metadata["seed"] = 0
+
+    usage = payload.get("usage")
+    if isinstance(usage, dict):
+        for field in ("queue_time", "prompt_time", "completion_time", "total_time"):
+            if field in usage:
+                usage[field] = 0
+
+    body["string"] = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
     return response

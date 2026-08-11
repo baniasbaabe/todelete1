@@ -8,90 +8,29 @@ interactions:
     headers:
       accept:
       - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
       connection:
       - keep-alive
-      content-length:
-      - '449'
       content-type:
       - application/json
       host:
       - api.groq.com
-      user-agent:
-      - AsyncGroq/Python 1.6.0
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - async:asyncio
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 1.6.0
-      x-stainless-read-timeout:
-      - '60'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.0
     method: POST
     uri: https://api.groq.com/openai/v1/chat/completions
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAA/1VS27KbMAx871ec0TOkYGxuv1I6jLGVxAnYxHZyQjP8e8WZQzp9scfSrrQr+QVG
-        QwvqLKOa5jGVjVQadZZqWcqUM8HTptGYasYalimlB9ZAAm64oIrfxINyRMVonKWU8igjUtG8qksu
-        Ki54ApPTOBL89on253YUhzJl1bDhz84oDND+eoGxGp/QZkTAEOQJoX2BdyPdIEMwIUobN46zEe3W
-        /9XZj48OHujN0Si5aehnNxq1dNBSYj676Dro7AprAqM7zd4N1MzexzGBo7EmnHtSHEh7CyG6Gdbf
-        Cdz35rc73rGPZqJXdsjqOmsYrxKgMtMc++iuaKlcJf6FdmwmaGaiqDe5+3zehLz4P7yTGG+KvGRl
-        AtFFOb7xdf2O7NAiy8s8L/n6LbcfyMdVu0+72wtLiDj15PKEfvbma2LHueeNLoe8Fo2mWT77k3e3
-        zevXT/B467P8+sdfLgvnKJbH8pyaS8mzoJUkfMBtuYJVdS7qct0C/kEbJGHoqQC50ThJq2H98Reh
-        KqOHXgIAAA==
+        eyJjaG9pY2VzIjpbeyJmaW5pc2hfcmVhc29uIjoic3RvcCIsImluZGV4IjowLCJsb2dwcm9icyI6
+        bnVsbCwibWVzc2FnZSI6eyJjb250ZW50Ijoie1xuICBcInZlcmlmaWNhdGlvbl9wb2xpY3lcIjog
+        XCJwaG90b1wiXG59Iiwicm9sZSI6ImFzc2lzdGFudCJ9fV0sImNyZWF0ZWQiOjAsImlkIjoiY2hh
+        dGNtcGwtdmNyIiwibW9kZWwiOiJxd2VuL3F3ZW4zLjYtMjdiIiwib2JqZWN0IjoiY2hhdC5jb21w
+        bGV0aW9uIiwic3lzdGVtX2ZpbmdlcnByaW50IjoiZnBfdmNyIiwidXNhZ2UiOnsiY29tcGxldGlv
+        bl90aW1lIjowLCJjb21wbGV0aW9uX3Rva2VucyI6MTMsInByb21wdF90aW1lIjowLCJwcm9tcHRf
+        dG9rZW5zIjo3NSwicXVldWVfdGltZSI6MCwidG90YWxfdGltZSI6MCwidG90YWxfdG9rZW5zIjo4
+        OH0sInVzYWdlX2JyZWFrZG93biI6bnVsbCwieF9ncm9xIjp7ImlkIjoicmVxX3ZjciIsInNlZWQi
+        OjB9fQ==
     headers:
-      alt-svc:
-      - h3=":443"; ma=86400
-      cache-control:
-      - private, max-age=0, no-store, no-cache, must-revalidate
-      cf-cache-status:
-      - DYNAMIC
-      cf-ray:
-      - a297d393f8ff3124-MUC
-      connection:
-      - keep-alive
-      content-encoding:
-      - gzip
       content-type:
       - application/json
-      date:
-      - Tue, 11 Aug 2026 14:10:54 GMT
-      server:
-      - cloudflare
-      strict-transport-security:
-      - max-age=15552000
-      transfer-encoding:
-      - chunked
-      vary:
-      - Origin
-      via:
-      - 1.1 google
-      x-groq-region:
-      - fra
-      x-ratelimit-limit-requests:
-      - '1000'
-      x-ratelimit-limit-tokens:
-      - '8000'
-      x-ratelimit-remaining-requests:
-      - '999'
-      x-ratelimit-remaining-tokens:
-      - '7924'
-      x-ratelimit-reset-requests:
-      - 1m26.4s
-      x-ratelimit-reset-tokens:
-      - 570ms
     status:
       code: 200
       message: OK

@@ -37,6 +37,7 @@ class _InMemoryDependencies(Dependencies):
     def __init__(self, users, habits, completions, **kwargs) -> None:
         super().__init__(db=SimpleNamespace(), **kwargs)
         object.__setattr__(self, "_repos", (users, habits, completions))
+        object.__setattr__(self, "uow_session", SimpleNamespace(commit=AsyncMock()))
 
     @asynccontextmanager
     async def unit_of_work(self):
@@ -45,7 +46,7 @@ class _InMemoryDependencies(Dependencies):
             users=users,
             habits=habits,
             completions=completions,
-            session=SimpleNamespace(commit=AsyncMock()),
+            session=self.uow_session,
         )
 
 
@@ -74,13 +75,14 @@ async def env():
         completions=completions,
         recommender=recommender,
         user=user,
+        uow_session=deps.uow_session,
         context=context,
     )
 
 
-def update_for(text: str) -> SimpleNamespace:
+def update_for(text: str, *, telegram_id: int = TELEGRAM_ID) -> SimpleNamespace:
     message = SimpleNamespace(text=text, reply_text=AsyncMock(), photo=[])
-    return SimpleNamespace(message=message, effective_user=SimpleNamespace(id=TELEGRAM_ID, username="tester"))
+    return SimpleNamespace(message=message, effective_user=SimpleNamespace(id=telegram_id, username="tester"))
 
 
 async def test_add_without_verify_waits_for_confirmation(env) -> None:
@@ -109,6 +111,16 @@ async def test_add_without_user_data_is_ignored(env) -> None:
     assert env.recommender.names == []
 
 
+async def test_unregistered_user_is_rejected_before_recommendation(env) -> None:
+    command = update_for("/add_habit Gym", telegram_id=TELEGRAM_ID + 1)
+
+    await add_habit_handler(command, env.context)
+
+    assert env.recommender.names == []
+    assert "pending_habit_setup" not in env.context.user_data
+    assert command.message.reply_text.await_args.args[0] == "Please /start first."
+
+
 async def test_explicit_verify_creates_without_user_data(env) -> None:
     env.context.user_data = None
     command = update_for("/add_habit Gym --verify photo")
@@ -129,6 +141,7 @@ async def test_yes_creates_with_recommended_policy(env) -> None:
     habit = (await env.habits.find_active_by_user(env.user.id))[0]
     assert habit.verification_policy is VerificationPolicy.PHOTO
     assert "pending_habit_setup" not in env.context.user_data
+    env.uow_session.commit.assert_awaited_once()
 
 
 async def test_explicit_choice_overrides_recommendation(env) -> None:
@@ -188,6 +201,51 @@ async def test_second_setup_replaces_the_first(env) -> None:
 
     assert env.context.user_data["pending_habit_setup"]["name"] == "Read"
     assert replacement.message.reply_text.await_args.args[0].startswith('Replacing the pending setup with "Read".')
+
+
+async def test_repeating_identical_setup_reuses_the_pending_recommendation(env) -> None:
+    await add_habit_handler(update_for("/add_habit Gym"), env.context)
+    repeated = update_for("/add_habit Gym")
+
+    await add_habit_handler(repeated, env.context)
+
+    assert env.recommender.names == ["Gym"]
+    assert env.context.user_data["pending_habit_setup"] == {
+        "name": "Gym",
+        "recommendation": "photo",
+    }
+    assert "recommend photo" in repeated.message.reply_text.await_args.args[0].lower()
+
+
+async def test_successful_explicit_add_clears_older_pending_setup_after_commit(env) -> None:
+    await add_habit_handler(update_for("/add_habit A"), env.context)
+
+    async def assert_pending_during_commit() -> None:
+        assert env.context.user_data["pending_habit_setup"]["name"] == "A"
+
+    env.uow_session.commit.side_effect = assert_pending_during_commit
+    command = update_for("/add_habit B --verify photo")
+
+    await add_habit_handler(command, env.context)
+
+    env.uow_session.commit.assert_awaited_once()
+    assert "pending_habit_setup" not in env.context.user_data
+
+
+async def test_failed_explicit_add_keeps_older_pending_setup(env) -> None:
+    await add_habit_handler(update_for("/add_habit A"), env.context)
+    await CreateHabit(env.users, env.habits).execute(
+        TelegramId(TELEGRAM_ID),
+        HabitName("B"),
+        verification_policy=VerificationPolicy.PHOTO,
+    )
+    command = update_for("/add_habit B --verify photo")
+
+    await add_habit_handler(command, env.context)
+
+    assert env.context.user_data["pending_habit_setup"]["name"] == "A"
+    env.uow_session.commit.assert_not_awaited()
+    assert command.message.reply_text.await_args.args[0] == "That habit already exists!"
 
 
 async def test_explicit_none_marks_the_new_habit_as_configured(env) -> None:
