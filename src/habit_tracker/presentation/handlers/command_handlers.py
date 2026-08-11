@@ -71,7 +71,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 @trace("add_habit", handler="add_habit")
 async def add_habit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message or not update.effective_user or not update.message.text or context.user_data is None:
+    if not update.message or not update.effective_user or not update.message.text:
         return
     args = update.message.text.split(maxsplit=1)
     if len(args) < 2:
@@ -85,9 +85,12 @@ async def add_habit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return
 
     if policy is VerificationPolicy.NONE:
+        user_data = context.user_data
+        if user_data is None:
+            return
         recommendation = await dependencies(context).verification_recommender.recommend(habit_name)
-        replacing = load_pending_setup(context.user_data) is not None
-        save_pending_setup(context.user_data, PendingHabitSetup(habit_name, recommendation))
+        replacing = load_pending_setup(user_data) is not None
+        save_pending_setup(user_data, PendingHabitSetup(habit_name, recommendation))
         prefix = f'Replacing the pending setup with "{habit_name.value}".\n\n' if replacing else ""
         await update.message.reply_text(f"{prefix}{format_setup_prompt(habit_name, recommendation)}")
         return

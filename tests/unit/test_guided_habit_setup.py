@@ -109,6 +109,18 @@ async def test_add_without_user_data_is_ignored(env) -> None:
     assert env.recommender.names == []
 
 
+async def test_explicit_verify_creates_without_user_data(env) -> None:
+    env.context.user_data = None
+    command = update_for("/add_habit Gym --verify photo")
+
+    await add_habit_handler(command, env.context)
+
+    habit = (await env.habits.find_active_by_user(env.user.id))[0]
+    assert habit.verification_policy is VerificationPolicy.PHOTO
+    assert env.recommender.names == []
+    assert "created" in command.message.reply_text.await_args.args[0].lower()
+
+
 async def test_yes_creates_with_recommended_policy(env) -> None:
     await add_habit_handler(update_for("/add_habit Gym"), env.context)
 
