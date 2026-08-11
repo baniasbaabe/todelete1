@@ -67,13 +67,13 @@ dev: init
 
 # Run the test suite.
 test:
-    TESTCONTAINERS_RYUK_DISABLED=true uv run pytest -n auto
+    uv run pytest -n auto
 
 # Record missing Groq and Jina API cassettes using credentials from .env.
 record-cassettes:
     #!/usr/bin/env bash
     set -euo pipefail
-    RECORD_CASSETTES=1 TESTCONTAINERS_RYUK_DISABLED=true uv run pytest tests/integration/ -v
+    RECORD_CASSETTES=1 uv run pytest tests/integration/ -v
 
 # Run lint and formatting checks.
 check:
