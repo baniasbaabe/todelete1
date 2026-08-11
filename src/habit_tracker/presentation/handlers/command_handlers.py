@@ -17,6 +17,12 @@ from habit_tracker.domain.value_objects.verification_policy import VerificationP
 from habit_tracker.infrastructure.observability.tracing import trace
 from habit_tracker.presentation.dependencies import dependencies
 from habit_tracker.presentation.formatters import format_habit_list, format_help
+from habit_tracker.presentation.handlers.verification_setup import (
+    PendingHabitSetup,
+    format_setup_prompt,
+    load_pending_setup,
+    save_pending_setup,
+)
 
 _ADD_HABIT_USAGE = "Usage: /add_habit <name> [--verify text|photo|quiz]"
 _INVALID_VERIFICATION = "Verification type must be text, photo, or quiz."
@@ -76,6 +82,14 @@ async def add_habit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         habit_name, policy = _parse_add_habit_args(args[1])
     except ValueError as exc:
         await update.message.reply_text(str(exc))
+        return
+
+    if policy is VerificationPolicy.NONE:
+        recommendation = await dependencies(context).verification_recommender.recommend(habit_name)
+        replacing = load_pending_setup(context.user_data) is not None
+        save_pending_setup(context.user_data, PendingHabitSetup(habit_name, recommendation))
+        prefix = f'Replacing the pending setup with "{habit_name.value}".\n\n' if replacing else ""
+        await update.message.reply_text(f"{prefix}{format_setup_prompt(habit_name, recommendation)}")
         return
 
     try:

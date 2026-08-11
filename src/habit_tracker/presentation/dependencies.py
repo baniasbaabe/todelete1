@@ -10,6 +10,7 @@ from habit_tracker.application.ports.ai_services import (
     MemoryStore,
     PatternAnalyzer,
     ProofVerifier,
+    VerificationRecommender,
 )
 from habit_tracker.domain.exceptions import ConfigurationError
 from habit_tracker.infrastructure.database.connection import DatabaseSessionManager
@@ -30,6 +31,7 @@ class Dependencies:
     proof_verifier: ProofVerifier
     memory_store: MemoryStore
     pattern_analyzer: PatternAnalyzer
+    verification_recommender: VerificationRecommender
 
     @asynccontextmanager
     async def unit_of_work(self) -> AsyncGenerator[UnitOfWork]:

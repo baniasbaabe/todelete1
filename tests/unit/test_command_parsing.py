@@ -13,7 +13,7 @@ def test_add_habit_parser_accepts_a_valid_verification_policy() -> None:
     assert policy is VerificationPolicy.PHOTO
 
 
-def test_add_habit_parser_defaults_to_no_verification() -> None:
+def test_add_habit_parser_returns_none_to_start_guided_setup() -> None:
     name, policy = _parse_add_habit_args("Morning run")
 
     assert name.value == "Morning run"

@@ -7,6 +7,10 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Messa
 from habit_tracker.infrastructure.ai.llm_client import GroqLLMClient
 from habit_tracker.infrastructure.ai.pattern_analyzer import LLMPatternAnalyzer
 from habit_tracker.infrastructure.ai.proof_verifier import LLMProofVerifier
+from habit_tracker.infrastructure.ai.verification_recommender import (
+    LLMVerificationRecommender,
+    SafeVerificationRecommender,
+)
 from habit_tracker.infrastructure.config.settings import Settings
 from habit_tracker.infrastructure.database.connection import DatabaseSessionManager
 from habit_tracker.infrastructure.logging.logger import configure_logging
@@ -46,6 +50,7 @@ def main() -> None:
     db = DatabaseSessionManager(settings.database_url)
     llm = GroqLLMClient(settings.groq_api_key, settings.llm_model, settings.llm_temperature)
     proof_verifier = LLMProofVerifier(llm)
+    verification_recommender = SafeVerificationRecommender(LLMVerificationRecommender(llm))
     memory_store = Mem0MemoryStore(settings.get_mem0_config(), telemetry_enabled=settings.mem0_telemetry)
     pattern_analyzer = LLMPatternAnalyzer(llm, memory_store)
     persistence = PostgresPersistence(settings.database_url)
@@ -57,6 +62,7 @@ def main() -> None:
         proof_verifier=proof_verifier,
         memory_store=memory_store,
         pattern_analyzer=pattern_analyzer,
+        verification_recommender=verification_recommender,
     )
 
     # post_init runs after Application.initialize(), which reassigns bot_data

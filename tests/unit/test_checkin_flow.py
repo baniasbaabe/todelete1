@@ -33,6 +33,7 @@ from tests.unit.conftest import (
     FakeMemoryStore,
     FakePatternAnalyzer,
     FakeProofVerifier,
+    FakeVerificationRecommender,
     InMemoryCompletionRepository,
     InMemoryHabitRepository,
     InMemoryUserRepository,
@@ -73,6 +74,7 @@ def env():
         proof_verifier=FakeProofVerifier(result_verified=True),
         memory_store=memory,
         pattern_analyzer=FakePatternAnalyzer(),
+        verification_recommender=FakeVerificationRecommender(),
     )
 
     app = ApplicationBuilder().token("123:ABC").build()

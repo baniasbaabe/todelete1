@@ -16,6 +16,7 @@ from telegram.ext import ApplicationBuilder, BasePersistence, PersistenceInput
 from habit_tracker.domain.exceptions import ConfigurationError
 from habit_tracker.infrastructure.persistence.postgres_persistence import PostgresPersistence
 from habit_tracker.presentation.dependencies import Dependencies, dependencies, install
+from tests.unit.conftest import FakeVerificationRecommender
 
 
 class _StubPersistence(BasePersistence):
@@ -62,11 +63,13 @@ class _StubPersistence(BasePersistence):
 
 
 def _fake_dependencies() -> Dependencies:
+    recommender = FakeVerificationRecommender()
     return Dependencies(
         db=SimpleNamespace(),
         proof_verifier=SimpleNamespace(),
         memory_store=SimpleNamespace(),
         pattern_analyzer=SimpleNamespace(),
+        verification_recommender=recommender,
     )
 
 
@@ -97,6 +100,7 @@ class TestDependencyWiring:
         install(app, deps)
 
         assert dependencies(_context_for(app)) is deps
+        assert dependencies(_context_for(app)).verification_recommender is deps.verification_recommender
 
     async def test_wiring_before_initialization_would_be_lost_if_bot_data_persisted(self) -> None:
         """Guards the reason the flag matters: with bot_data=True the wiring vanishes."""

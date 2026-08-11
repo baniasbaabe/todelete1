@@ -10,7 +10,8 @@ def format_help() -> str:
     return (
         "Available commands:\n"
         "/start - Register and get started\n"
-        "/add_habit <name> [--verify text|photo|quiz] - Add a new habit\n"
+        "/add_habit <name> - Add a habit and choose verification\n"
+        "/add_habit <name> --verify text|photo|quiz - Add immediately\n"
         "/list_habits - Show your active habits\n"
         "/delete_habit <name> - Remove a habit\n"
         "/checkin - Start daily check-in\n"
