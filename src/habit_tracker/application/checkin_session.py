@@ -17,6 +17,7 @@ TTL_HOURS = 24
 
 class SessionState(StrEnum):
     AWAITING_RESPONSE = "awaiting_response"
+    AWAITING_VERIFICATION_SETUP = "awaiting_verification_setup"
     AWAITING_PROOF = "awaiting_proof"
     AWAITING_QUIZ_TOPIC = "awaiting_quiz_topic"
     AWAITING_QUIZ_ANSWER = "awaiting_quiz_answer"
@@ -38,6 +39,7 @@ class CheckinSession:
     results: list[CheckinResult] = field(default_factory=list)
     state: SessionState = SessionState.AWAITING_RESPONSE
     quiz_question: str | None = None
+    verification_recommendation: VerificationPolicy | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @classmethod
@@ -51,6 +53,7 @@ class CheckinSession:
 
     def advance(self) -> Habit | None:
         self.current_index += 1
+        self.verification_recommendation = None
         if self.current_index >= len(self.habits):
             self.state = SessionState.DONE
             return None
@@ -84,6 +87,9 @@ class CheckinSession:
             "current_index": self.current_index,
             "state": self.state.value,
             "quiz_question": self.quiz_question,
+            "verification_recommendation": (
+                self.verification_recommendation.value if self.verification_recommendation is not None else None
+            ),
             "created_at": self.created_at.isoformat(),
             "habits": [
                 {
@@ -133,5 +139,10 @@ class CheckinSession:
             results=results,
             state=SessionState(data["state"]),
             quiz_question=data.get("quiz_question"),
+            verification_recommendation=(
+                VerificationPolicy(data["verification_recommendation"])
+                if data.get("verification_recommendation") is not None
+                else None
+            ),
             created_at=datetime.fromisoformat(data["created_at"]),
         )
