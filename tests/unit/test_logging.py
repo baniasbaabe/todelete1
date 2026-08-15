@@ -35,3 +35,22 @@ def test_configure_logging_suppresses_http_client_info_logs() -> None:
     finally:
         for logger_name, level in logger_levels.items():
             logging.getLogger(logger_name).setLevel(level)
+
+
+def test_configure_logging_hides_routine_mem0_noise_but_keeps_errors() -> None:
+    logger_names = ("mem0.vector_stores.pgvector", "mem0.utils.spacy_models")
+    original_levels = {name: logging.getLogger(name).level for name in logger_names}
+    unrelated = logging.getLogger("mem0.memory.main")
+    unrelated_level = unrelated.level
+    try:
+        configure_logging()
+        for name in logger_names:
+            dependency_logger = logging.getLogger(name)
+            assert dependency_logger.level == logging.ERROR
+            assert dependency_logger.isEnabledFor(logging.WARNING) is False
+            assert dependency_logger.isEnabledFor(logging.ERROR) is True
+        assert unrelated.level == unrelated_level
+    finally:
+        for name, level in original_levels.items():
+            logging.getLogger(name).setLevel(level)
+        unrelated.setLevel(unrelated_level)

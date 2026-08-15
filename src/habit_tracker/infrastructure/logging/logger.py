@@ -35,6 +35,9 @@ def configure_logging(level: int = logging.INFO) -> None:
         if not any(isinstance(filter_, _SecretRedactionFilter) for filter_ in dependency_logger.filters):
             dependency_logger.addFilter(_SecretRedactionFilter())
 
+    for logger_name in ("mem0.vector_stores.pgvector", "mem0.utils.spacy_models"):
+        logging.getLogger(logger_name).setLevel(logging.ERROR)
+
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
