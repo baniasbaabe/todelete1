@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import structlog
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 from habit_tracker.infrastructure.ai.llm_client import GroqLLMClient
 from habit_tracker.infrastructure.ai.pattern_analyzer import LLMPatternAnalyzer
@@ -26,6 +26,11 @@ from habit_tracker.presentation.handlers.command_handlers import (
     list_habits_handler,
     start_handler,
 )
+from habit_tracker.presentation.handlers.flow_handlers import (
+    interrupt_pending_setup_handler,
+    resume_checkin_after_command_handler,
+    unknown_command_handler,
+)
 from habit_tracker.presentation.handlers.proof_handlers import (
     photo_response_handler,
     text_response_handler,
@@ -38,6 +43,21 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     logger.error("unhandled_exception", error=str(context.error), exc_info=context.error)
     if isinstance(update, Update) and update.message:
         await update.message.reply_text("Something went wrong. Please try again later.")
+
+
+def register_handlers(app: Application) -> None:
+    """Register lifecycle, command, and response handlers."""
+    app.add_handler(MessageHandler(filters.COMMAND, interrupt_pending_setup_handler), group=-1)
+    app.add_handler(CommandHandler("start", start_handler))
+    app.add_handler(CommandHandler("add_habit", add_habit_handler))
+    app.add_handler(CommandHandler("list_habits", list_habits_handler))
+    app.add_handler(CommandHandler("delete_habit", delete_habit_handler))
+    app.add_handler(CommandHandler("help", help_handler))
+    app.add_handler(CommandHandler("checkin", checkin_handler))
+    app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
+    app.add_handler(MessageHandler(filters.PHOTO, photo_response_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_response_handler))
+    app.add_handler(MessageHandler(filters.COMMAND, resume_checkin_after_command_handler), group=1)
 
 
 def main() -> None:
@@ -72,14 +92,7 @@ def main() -> None:
 
     app.post_init = wire_dependencies
 
-    app.add_handler(CommandHandler("start", start_handler))
-    app.add_handler(CommandHandler("add_habit", add_habit_handler))
-    app.add_handler(CommandHandler("list_habits", list_habits_handler))
-    app.add_handler(CommandHandler("delete_habit", delete_habit_handler))
-    app.add_handler(CommandHandler("help", help_handler))
-    app.add_handler(CommandHandler("checkin", checkin_handler))
-    app.add_handler(MessageHandler(filters.PHOTO, photo_response_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_response_handler))
+    register_handlers(app)
     app.add_error_handler(error_handler)
 
     async def shutdown_cleanup(app_instance: object) -> None:
