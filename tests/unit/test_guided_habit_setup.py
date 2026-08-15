@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock
 import pytest
 from telegram.ext import ApplicationBuilder
 
+from habit_tracker.application.checkin_session import SessionState
 from habit_tracker.application.use_cases.create_habit import CreateHabit
 from habit_tracker.application.use_cases.register_user import RegisterUser
 from habit_tracker.domain.value_objects import HabitName, TelegramId
@@ -16,8 +17,14 @@ from habit_tracker.domain.value_objects.verification_policy import VerificationP
 from habit_tracker.infrastructure.database.unit_of_work import UnitOfWork
 from habit_tracker.presentation.dependencies import Dependencies, install
 from habit_tracker.presentation.handlers.checkin_handlers import checkin_handler
-from habit_tracker.presentation.handlers.command_handlers import add_habit_handler
+from habit_tracker.presentation.handlers.command_handlers import add_habit_handler, help_handler
+from habit_tracker.presentation.handlers.flow_handlers import (
+    interrupt_pending_setup_handler,
+    resume_checkin_after_command_handler,
+    unknown_command_handler,
+)
 from habit_tracker.presentation.handlers.proof_handlers import text_response_handler
+from habit_tracker.presentation.handlers.session_store import load_session, save_session
 from tests.unit.conftest import (
     FakeMemoryStore,
     FakePatternAnalyzer,
@@ -85,7 +92,7 @@ def update_for(text: str, *, telegram_id: int = TELEGRAM_ID) -> SimpleNamespace:
     return SimpleNamespace(message=message, effective_user=SimpleNamespace(id=telegram_id, username="tester"))
 
 
-async def test_add_without_verify_waits_for_confirmation(env) -> None:
+async def test_add_habit_always_waits_for_explicit_choice(env) -> None:
     command = update_for("/add_habit Gym")
 
     await add_habit_handler(command, env.context)
@@ -95,10 +102,9 @@ async def test_add_without_verify_waits_for_confirmation(env) -> None:
         "name": "Gym",
         "recommendation": "photo",
     }
-    prompt = command.message.reply_text.await_args.args[0].lower()
-    assert "recommend photo" in prompt
-    assert "'cancel'" in prompt
-    assert "'skip'" not in prompt
+    prompt = command.message.reply_text.await_args.args[0]
+    assert "Choose: quiz, photo, text, or none." in prompt
+    assert "yes" not in prompt.lower()
     assert env.recommender.names == ["Gym"]
 
 
@@ -121,27 +127,15 @@ async def test_unregistered_user_is_rejected_before_recommendation(env) -> None:
     assert command.message.reply_text.await_args.args[0] == "Please /start first."
 
 
-async def test_explicit_verify_creates_without_user_data(env) -> None:
-    env.context.user_data = None
-    command = update_for("/add_habit Gym --verify photo")
-
-    await add_habit_handler(command, env.context)
-
-    habit = (await env.habits.find_active_by_user(env.user.id))[0]
-    assert habit.verification_policy is VerificationPolicy.PHOTO
-    assert env.recommender.names == []
-    assert "created" in command.message.reply_text.await_args.args[0].lower()
-
-
-async def test_yes_creates_with_recommended_policy(env) -> None:
+async def test_yes_repeats_prompt_without_creating(env) -> None:
     await add_habit_handler(update_for("/add_habit Gym"), env.context)
+    reply = update_for("yes")
 
-    await text_response_handler(update_for("yes"), env.context)
+    await text_response_handler(reply, env.context)
 
-    habit = (await env.habits.find_active_by_user(env.user.id))[0]
-    assert habit.verification_policy is VerificationPolicy.PHOTO
-    assert "pending_habit_setup" not in env.context.user_data
-    env.uow_session.commit.assert_awaited_once()
+    assert await env.habits.find_active_by_user(env.user.id) == []
+    assert env.context.user_data["pending_habit_setup"]["name"] == "Gym"
+    assert "Choose: quiz, photo, text, or none." in reply.message.reply_text.await_args.args[0]
 
 
 async def test_explicit_choice_overrides_recommendation(env) -> None:
@@ -170,13 +164,13 @@ async def test_invalid_choice_repeats_prompt_and_keeps_pending_setup(env) -> Non
     await text_response_handler(reply, env.context)
 
     assert env.context.user_data["pending_habit_setup"]["name"] == "Gym"
-    assert "recommend photo" in reply.message.reply_text.await_args.args[0].lower()
+    assert "Choose: quiz, photo, text, or none." in reply.message.reply_text.await_args.args[0]
 
 
 async def test_duplicate_failure_keeps_pending_setup(env) -> None:
     await CreateHabit(env.users, env.habits).execute(TelegramId(TELEGRAM_ID), HabitName("Gym"))
     await add_habit_handler(update_for("/add_habit Gym"), env.context)
-    reply = update_for("yes")
+    reply = update_for("photo")
 
     await text_response_handler(reply, env.context)
 
@@ -193,59 +187,12 @@ async def test_choice_is_case_insensitive(env) -> None:
     assert habit.verification_policy is VerificationPolicy.TEXT
 
 
-async def test_second_setup_replaces_the_first(env) -> None:
+async def test_second_add_replaces_pending_state(env) -> None:
     await add_habit_handler(update_for("/add_habit Gym"), env.context)
-    replacement = update_for("/add_habit Read")
 
-    await add_habit_handler(replacement, env.context)
+    await add_habit_handler(update_for("/add_habit Read"), env.context)
 
     assert env.context.user_data["pending_habit_setup"]["name"] == "Read"
-    assert replacement.message.reply_text.await_args.args[0].startswith('Replacing the pending setup with "Read".')
-
-
-async def test_repeating_identical_setup_reuses_the_pending_recommendation(env) -> None:
-    await add_habit_handler(update_for("/add_habit Gym"), env.context)
-    repeated = update_for("/add_habit Gym")
-
-    await add_habit_handler(repeated, env.context)
-
-    assert env.recommender.names == ["Gym"]
-    assert env.context.user_data["pending_habit_setup"] == {
-        "name": "Gym",
-        "recommendation": "photo",
-    }
-    assert "recommend photo" in repeated.message.reply_text.await_args.args[0].lower()
-
-
-async def test_successful_explicit_add_clears_older_pending_setup_after_commit(env) -> None:
-    await add_habit_handler(update_for("/add_habit A"), env.context)
-
-    async def assert_pending_during_commit() -> None:
-        assert env.context.user_data["pending_habit_setup"]["name"] == "A"
-
-    env.uow_session.commit.side_effect = assert_pending_during_commit
-    command = update_for("/add_habit B --verify photo")
-
-    await add_habit_handler(command, env.context)
-
-    env.uow_session.commit.assert_awaited_once()
-    assert "pending_habit_setup" not in env.context.user_data
-
-
-async def test_failed_explicit_add_keeps_older_pending_setup(env) -> None:
-    await add_habit_handler(update_for("/add_habit A"), env.context)
-    await CreateHabit(env.users, env.habits).execute(
-        TelegramId(TELEGRAM_ID),
-        HabitName("B"),
-        verification_policy=VerificationPolicy.PHOTO,
-    )
-    command = update_for("/add_habit B --verify photo")
-
-    await add_habit_handler(command, env.context)
-
-    assert env.context.user_data["pending_habit_setup"]["name"] == "A"
-    env.uow_session.commit.assert_not_awaited()
-    assert command.message.reply_text.await_args.args[0] == "That habit already exists!"
 
 
 async def test_explicit_none_marks_the_new_habit_as_configured(env) -> None:
@@ -258,19 +205,127 @@ async def test_explicit_none_marks_the_new_habit_as_configured(env) -> None:
     assert env.context.user_data["configured_none_habit_ids"] == [habit.id]
 
 
-async def test_explicit_verify_bypasses_recommender_and_creates_immediately(env) -> None:
-    command = update_for("/add_habit Gym --verify photo")
+async def test_add_habit_treats_the_complete_tail_as_the_name(env) -> None:
+    await add_habit_handler(update_for("/add_habit Learning Python --verify quiz"), env.context)
+
+    assert env.context.user_data["pending_habit_setup"]["name"] == "Learning Python --verify quiz"
+    assert env.recommender.names == ["Learning Python --verify quiz"]
+
+
+async def test_pending_setup_pauses_checkin_and_resumes_after_choice(env) -> None:
+    await CreateHabit(env.users, env.habits).execute(
+        TelegramId(TELEGRAM_ID), HabitName("Gym"), verification_policy=VerificationPolicy.TEXT
+    )
+    await checkin_handler(update_for("/checkin"), env.context)
+    await text_response_handler(update_for("yes"), env.context)
+    before = dict(env.context.user_data["checkin_session"])
+    await add_habit_handler(update_for("/add_habit Read"), env.context)
+    reply = update_for("quiz")
+
+    await text_response_handler(reply, env.context)
+
+    assert env.context.user_data["checkin_session"] == before
+    messages = [call.args[0] for call in reply.message.reply_text.await_args_list]
+    assert messages[0] == "Habit 'Read' created with quiz verification."
+    assert "Please send your text proof:" in messages[1]
+
+
+async def test_cancelled_setup_restores_exact_quiz_question(env) -> None:
+    await CreateHabit(env.users, env.habits).execute(
+        TelegramId(TELEGRAM_ID), HabitName("Learn"), verification_policy=VerificationPolicy.QUIZ
+    )
+    await checkin_handler(update_for("/checkin"), env.context)
+    session = load_session(env.context)
+    assert session is not None
+    session.state = SessionState.AWAITING_QUIZ_ANSWER
+    session.quiz_question = "What is await?"
+    save_session(env.context, session)
+    before = dict(env.context.user_data["checkin_session"])
+    await add_habit_handler(update_for("/add_habit Read"), env.context)
+    reply = update_for("cancel")
+
+    await text_response_handler(reply, env.context)
+
+    assert env.context.user_data["checkin_session"] == before
+    messages = [call.args[0] for call in reply.message.reply_text.await_args_list]
+    assert messages[0] == "Habit setup cancelled."
+    assert "What is await?" in messages[1]
+
+
+async def test_command_clears_setup_but_preserves_checkin(env) -> None:
+    await CreateHabit(env.users, env.habits).execute(
+        TelegramId(TELEGRAM_ID), HabitName("Gym"), verification_policy=VerificationPolicy.TEXT
+    )
+    await checkin_handler(update_for("/checkin"), env.context)
+    before = dict(env.context.user_data["checkin_session"])
+    await add_habit_handler(update_for("/add_habit Read"), env.context)
+    command = update_for("/help")
+
+    await interrupt_pending_setup_handler(command, env.context)
+
+    assert "pending_habit_setup" not in env.context.user_data
+    assert env.context.user_data["checkin_session"] == before
+    assert command.message.reply_text.await_args.args[0] == 'Cancelled setup for "Read".'
+
+
+async def test_help_result_is_followed_by_paused_checkin(env) -> None:
+    await CreateHabit(env.users, env.habits).execute(
+        TelegramId(TELEGRAM_ID), HabitName("Gym"), verification_policy=VerificationPolicy.TEXT
+    )
+    await checkin_handler(update_for("/checkin"), env.context)
+    command = update_for("/help")
+
+    await help_handler(command, env.context)
+    await resume_checkin_after_command_handler(command, env.context)
+
+    messages = [call.args[0] for call in command.message.reply_text.await_args_list]
+    assert messages[0].startswith("Available commands:")
+    assert "Did you complete" in messages[1]
+
+
+async def test_new_add_overlay_prevents_post_command_resume(env) -> None:
+    await CreateHabit(env.users, env.habits).execute(
+        TelegramId(TELEGRAM_ID), HabitName("Gym"), verification_policy=VerificationPolicy.TEXT
+    )
+    await checkin_handler(update_for("/checkin"), env.context)
+    command = update_for("/add_habit Read")
 
     await add_habit_handler(command, env.context)
+    await resume_checkin_after_command_handler(command, env.context)
 
-    habit = (await env.habits.find_active_by_user(env.user.id))[0]
-    assert habit.verification_policy is VerificationPolicy.PHOTO
-    assert "pending_habit_setup" not in env.context.user_data
-    assert env.recommender.names == []
-    assert "created" in command.message.reply_text.await_args.args[0].lower()
+    assert command.message.reply_text.await_count == 1
+    assert env.context.user_data["pending_habit_setup"]["name"] == "Read"
 
 
-async def test_active_checkin_handles_text_before_pending_setup(env) -> None:
+async def test_checkin_command_is_not_resumed_twice(env) -> None:
+    await CreateHabit(env.users, env.habits).execute(
+        TelegramId(TELEGRAM_ID), HabitName("Gym"), verification_policy=VerificationPolicy.TEXT
+    )
+    await checkin_handler(update_for("/checkin"), env.context)
+    command = update_for("/checkin")
+
+    await checkin_handler(command, env.context)
+    await resume_checkin_after_command_handler(command, env.context)
+
+    assert command.message.reply_text.await_count == 1
+
+
+async def test_unknown_command_replies_then_resumes_checkin(env) -> None:
+    await CreateHabit(env.users, env.habits).execute(
+        TelegramId(TELEGRAM_ID), HabitName("Gym"), verification_policy=VerificationPolicy.TEXT
+    )
+    await checkin_handler(update_for("/checkin"), env.context)
+    command = update_for("/does_not_exist")
+
+    await unknown_command_handler(command, env.context)
+    await resume_checkin_after_command_handler(command, env.context)
+
+    messages = [call.args[0] for call in command.message.reply_text.await_args_list]
+    assert messages[0] == "Unknown command. Use /help to see available commands."
+    assert "Did you complete" in messages[1]
+
+
+async def test_pending_setup_has_text_priority_over_active_checkin(env) -> None:
     await CreateHabit(env.users, env.habits).execute(
         TelegramId(TELEGRAM_ID),
         HabitName("Gym"),
@@ -284,4 +339,4 @@ async def test_active_checkin_handles_text_before_pending_setup(env) -> None:
 
     assert "checkin_session" in env.context.user_data
     assert env.context.user_data["pending_habit_setup"]["name"] == "Read"
-    assert "didn't catch that" in reply.message.reply_text.await_args.args[0].lower()
+    assert "Choose: quiz, photo, text, or none." in reply.message.reply_text.await_args.args[0]

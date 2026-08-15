@@ -54,13 +54,10 @@ def clear_pending_setup(user_data: dict) -> None:
     user_data.pop(PENDING_HABIT_KEY, None)
 
 
-def parse_setup_choice(choice: str, recommendation: VerificationPolicy) -> VerificationPolicy | None:
-    """Return the selected policy, or ``None`` for an unrecognised choice."""
-    normalized = choice.strip().lower()
-    if normalized == "yes":
-        return recommendation
+def parse_setup_choice(choice: str) -> VerificationPolicy | None:
+    """Return an explicit verification policy or ``None``."""
     try:
-        return VerificationPolicy(normalized)
+        return VerificationPolicy(choice.strip().lower())
     except ValueError:
         return None
 
@@ -90,7 +87,7 @@ def format_setup_prompt(name: HabitName, recommendation: VerificationPolicy) -> 
     """Format the guided verification setup prompt."""
     return (
         f'For "{name.value}", I recommend {recommendation.value} verification.\n'
-        "Reply 'yes' to use it, or choose: photo, quiz, text, none.\n"
+        "Choose: quiz, photo, text, or none.\n"
         "Reply 'cancel' to stop."
     )
 
@@ -99,7 +96,7 @@ def format_checkin_setup_prompt(name: HabitName, recommendation: VerificationPol
     """Format verification setup for an active check-in."""
     return (
         f'For "{name.value}", I recommend {recommendation.value} verification.\n'
-        "Reply 'yes' to use it, or choose: photo, quiz, text, none.\n"
+        "Choose: quiz, photo, text, or none.\n"
         "Reply 'skip' to skip this habit."
     )
 

@@ -3,57 +3,25 @@ from __future__ import annotations
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from habit_tracker.application.use_cases.create_habit import CreateHabit
 from habit_tracker.application.use_cases.delete_habit import DeleteHabit
 from habit_tracker.application.use_cases.get_registered_user import GetRegisteredUser
 from habit_tracker.application.use_cases.list_habits import ListHabits
 from habit_tracker.application.use_cases.register_user import RegisterUser
 from habit_tracker.domain.exceptions import (
-    HabitAlreadyExistsError,
     HabitNotFoundError,
     UserNotFoundError,
 )
 from habit_tracker.domain.value_objects import HabitName, TelegramId
-from habit_tracker.domain.value_objects.verification_policy import VerificationPolicy
 from habit_tracker.infrastructure.observability.tracing import trace
 from habit_tracker.presentation.dependencies import dependencies
 from habit_tracker.presentation.formatters import format_habit_list, format_help
 from habit_tracker.presentation.handlers.verification_setup import (
     PendingHabitSetup,
-    clear_pending_setup,
     format_setup_prompt,
-    load_pending_setup,
     save_pending_setup,
 )
 
-_ADD_HABIT_USAGE = "Usage: /add_habit <name> [--verify text|photo|quiz]"
-_INVALID_VERIFICATION = "Verification type must be text, photo, or quiz."
-
-
-def _parse_add_habit_args(raw: str) -> tuple[HabitName, VerificationPolicy]:
-    """Parse an add-habit argument string without silently weakening verification."""
-    tokens = raw.split()
-    if any(argument.startswith("--") and argument != "--verify" for argument in tokens):
-        raise ValueError(_INVALID_VERIFICATION)
-    verify_positions = [index for index, argument in enumerate(tokens) if argument == "--verify"]
-    if not verify_positions:
-        return HabitName(raw.strip()), VerificationPolicy.NONE
-
-    if len(verify_positions) != 1:
-        raise ValueError(_INVALID_VERIFICATION)
-
-    verify_index = verify_positions[0]
-    if verify_index == 0 or verify_index != len(tokens) - 2:
-        raise ValueError(_INVALID_VERIFICATION)
-
-    try:
-        policy = VerificationPolicy(tokens[-1].lower())
-    except ValueError as exc:
-        raise ValueError(_INVALID_VERIFICATION) from exc
-
-    if policy is VerificationPolicy.NONE:
-        raise ValueError(_INVALID_VERIFICATION)
-    return HabitName(" ".join(tokens[:verify_index])), policy
+_ADD_HABIT_USAGE = "Usage: /add_habit <name>"
 
 
 @trace("start", handler="start")
@@ -81,53 +49,26 @@ async def add_habit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return
 
     try:
-        habit_name, policy = _parse_add_habit_args(args[1])
+        habit_name = HabitName(args[1].strip())
     except ValueError as exc:
         await update.message.reply_text(str(exc))
         return
 
-    deps = dependencies(context)
-    if policy is VerificationPolicy.NONE:
-        user_data = context.user_data
-        if user_data is None:
-            return
-        try:
-            async with deps.unit_of_work() as uow:
-                await GetRegisteredUser(uow.users).execute(TelegramId(update.effective_user.id))
-        except UserNotFoundError:
-            await update.message.reply_text("Please /start first.")
-            return
-
-        pending = load_pending_setup(user_data)
-        if pending is not None and pending.name == habit_name:
-            await update.message.reply_text(format_setup_prompt(pending.name, pending.recommendation))
-            return
-
-        recommendation = await deps.verification_recommender.recommend(habit_name)
-        replacing = pending is not None
-        save_pending_setup(user_data, PendingHabitSetup(habit_name, recommendation))
-        prefix = f'Replacing the pending setup with "{habit_name.value}".\n\n' if replacing else ""
-        await update.message.reply_text(f"{prefix}{format_setup_prompt(habit_name, recommendation)}")
+    user_data = context.user_data
+    if user_data is None:
         return
 
+    deps = dependencies(context)
     try:
         async with deps.unit_of_work() as uow:
-            create = CreateHabit(uow.users, uow.habits)
-            habit = await create.execute(
-                TelegramId(update.effective_user.id),
-                habit_name,
-                verification_policy=policy,
-            )
-            await uow.commit()
-        if context.user_data is not None:
-            clear_pending_setup(context.user_data)
-        await update.message.reply_text(f"Habit '{habit.name.value}' created!")
+            await GetRegisteredUser(uow.users).execute(TelegramId(update.effective_user.id))
     except UserNotFoundError:
         await update.message.reply_text("Please /start first.")
-    except HabitAlreadyExistsError:
-        await update.message.reply_text("That habit already exists!")
-    except ValueError as e:
-        await update.message.reply_text(str(e))
+        return
+
+    recommendation = await deps.verification_recommender.recommend(habit_name)
+    save_pending_setup(user_data, PendingHabitSetup(habit_name, recommendation))
+    await update.message.reply_text(format_setup_prompt(habit_name, recommendation))
 
 
 @trace("list_habits", handler="list_habits")

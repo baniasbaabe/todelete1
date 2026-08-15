@@ -18,6 +18,7 @@ from habit_tracker.presentation.formatters import (
     format_checkin_summary,
     format_verification_setup_complete,
 )
+from habit_tracker.presentation.handlers.checkin_handlers import resume_active_checkin
 from habit_tracker.presentation.handlers.session_store import clear_session, load_session, save_session
 from habit_tracker.presentation.handlers.verification_setup import (
     clear_pending_setup,
@@ -36,7 +37,7 @@ NEGATIVE = ("no", "n")
 
 
 async def _handle_pending_habit_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Handle a verification choice after confirming no check-in is active."""
+    """Handle a pending verification choice before normal text responses."""
     if not update.message or not update.effective_user or update.message.text is None or context.user_data is None:
         return False
 
@@ -48,9 +49,10 @@ async def _handle_pending_habit_setup(update: Update, context: ContextTypes.DEFA
     if is_setup_cancel(update.message.text):
         clear_pending_setup(user_data)
         await update.message.reply_text("Habit setup cancelled.")
+        await resume_active_checkin(context, update.message, "Continuing your active check-in.")
         return True
 
-    policy = parse_setup_choice(update.message.text, setup.recommendation)
+    policy = parse_setup_choice(update.message.text)
     if policy is None:
         await update.message.reply_text(format_setup_prompt(setup.name, setup.recommendation))
         return True
@@ -67,6 +69,7 @@ async def _handle_pending_habit_setup(update: Update, context: ContextTypes.DEFA
             mark_none_configured(user_data, habit.id)
         clear_pending_setup(user_data)
         await update.message.reply_text(f"Habit '{habit.name.value}' created with {policy.value} verification.")
+        await resume_active_checkin(context, update.message, "Continuing your active check-in.")
     except UserNotFoundError:
         await update.message.reply_text("Please /start first.")
     except HabitAlreadyExistsError:
@@ -147,9 +150,12 @@ async def text_response_handler(update: Update, context: ContextTypes.DEFAULT_TY
         return
     user_data = context.user_data
 
+    if load_pending_setup(user_data) is not None:
+        await _handle_pending_habit_setup(update, context)
+        return
+
     session = load_session(context)
     if session is None:
-        await _handle_pending_habit_setup(update, context)
         return
 
     habit = session.current_habit()
@@ -173,7 +179,7 @@ async def text_response_handler(update: Update, context: ContextTypes.DEFAULT_TY
             await update.message.reply_text(prompt)
             return
 
-        policy = parse_setup_choice(update.message.text, recommendation)
+        policy = parse_setup_choice(update.message.text)
         if policy is None:
             await update.message.reply_text(format_checkin_setup_prompt(habit.name, recommendation))
             return

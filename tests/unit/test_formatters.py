@@ -18,7 +18,7 @@ class TestFormatters:
         assert "/add_habit" in text
         assert "/checkin" in text
         assert "/add_habit <name> - Add a habit and choose verification" in text
-        assert "/add_habit <name> --verify text|photo|quiz - Add immediately" in text
+        assert "--verify" not in text
 
     def test_format_habit_list_empty(self):
         text = format_habit_list([], [])

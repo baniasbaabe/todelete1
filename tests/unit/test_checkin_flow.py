@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock
 import pytest
 from telegram.ext import ApplicationBuilder
 
-from habit_tracker.application.checkin_session import TTL_HOURS, CheckinSession
+from habit_tracker.application.checkin_session import TTL_HOURS, CheckinSession, SessionState
 from habit_tracker.application.use_cases.create_habit import CreateHabit
 from habit_tracker.application.use_cases.record_checkin_insight import INSIGHT_CATEGORY
 from habit_tracker.application.use_cases.register_user import RegisterUser
@@ -28,8 +28,9 @@ from habit_tracker.domain.value_objects.verification_policy import VerificationP
 from habit_tracker.infrastructure.database.unit_of_work import UnitOfWork
 from habit_tracker.infrastructure.persistence.postgres_persistence import PostgresPersistence
 from habit_tracker.presentation.dependencies import Dependencies, install
-from habit_tracker.presentation.handlers.checkin_handlers import checkin_handler
+from habit_tracker.presentation.handlers.checkin_handlers import checkin_handler, resume_active_checkin
 from habit_tracker.presentation.handlers.proof_handlers import text_response_handler
+from habit_tracker.presentation.handlers.session_store import load_session, save_session
 from habit_tracker.presentation.handlers.verification_setup import is_none_configured, mark_none_configured
 from tests.unit.conftest import (
     FakeMemoryStore,
@@ -122,6 +123,30 @@ async def _drain_background_tasks(app) -> None:
 
 
 class TestCheckinFlow:
+    @pytest.mark.parametrize(
+        ("state", "quiz_question", "expected"),
+        [
+            (SessionState.AWAITING_RESPONSE, None, "Did you complete"),
+            (SessionState.AWAITING_PROOF, None, "Please send your text proof:"),
+            (SessionState.AWAITING_QUIZ_TOPIC, None, "What did you learn about today?"),
+            (SessionState.AWAITING_QUIZ_ANSWER, "What is await?", "What is await?"),
+        ],
+    )
+    async def test_resume_active_checkin_preserves_phase(self, env, state, quiz_question, expected) -> None:
+        user = await _seed(env, policy=VerificationPolicy.TEXT)
+        habit = (await env.habits.find_active_by_user(user.id))[0]
+        session = CheckinSession.start(user_id=user.id, habits=[habit])
+        session.state = state
+        session.quiz_question = quiz_question
+        save_session(env.context, session)
+        message = SimpleNamespace(reply_text=AsyncMock())
+
+        resumed = await resume_active_checkin(env.context, message, "Continuing your active check-in.")
+
+        assert resumed is True
+        assert expected in message.reply_text.await_args.args[0]
+        assert load_session(env.context).state is state
+
     async def test_checkin_opens_a_session(self, env) -> None:
         await _seed(env)
         update = _update()
@@ -275,7 +300,7 @@ class TestCheckinFlow:
         assert "'skip'" in prompt
         assert "'cancel'" not in prompt
 
-    async def test_selecting_recommended_photo_updates_without_advancing(self, env) -> None:
+    async def test_yes_is_invalid_during_existing_habit_setup(self, env) -> None:
         await _seed(env, policy=VerificationPolicy.NONE, configured_none=False)
         await checkin_handler(_update(), env.context)
         reply = _update("yes")
@@ -283,15 +308,10 @@ class TestCheckinFlow:
         await text_response_handler(reply, env.context)
 
         session = env.context.user_data["checkin_session"]
-        assert session["current_index"] == 0
-        assert session["state"] == "awaiting_response"
-        assert session["habits"][0]["verification_policy"] == "photo"
-        assert session["results"] == []
-        assert await env.completions.find_today_by_habits([session["habits"][0]["id"]]) == []
-        assert (await env.habits.find_by_id(session["habits"][0]["id"])).verification_policy is VerificationPolicy.PHOTO
-        env.uow_session.commit.assert_awaited_once()
-        assert "verification set to photo" in reply.message.reply_text.await_args.args[0].lower()
-        assert "submit photo proof" in reply.message.reply_text.await_args.args[0].lower()
+        assert session["state"] == "awaiting_verification_setup"
+        assert session["habits"][0]["verification_policy"] == "none"
+        assert "Choose: quiz, photo, text, or none." in reply.message.reply_text.await_args.args[0]
+        env.uow_session.commit.assert_not_awaited()
 
     @pytest.mark.parametrize("choice", ["photo", "quiz", "text", "none"])
     async def test_explicit_setup_choice_is_persisted(self, env, choice: str) -> None:

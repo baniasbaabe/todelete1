@@ -41,20 +41,20 @@ def test_pending_setup_can_be_cleared() -> None:
     assert PENDING_HABIT_KEY not in user_data
 
 
-def test_yes_selects_recommendation() -> None:
-    assert parse_setup_choice(" YES ", VerificationPolicy.QUIZ) is VerificationPolicy.QUIZ
+def test_yes_is_not_a_setup_choice() -> None:
+    assert parse_setup_choice(" YES ") is None
 
 
 @pytest.mark.parametrize("choice", ["photo", "QUIZ", " Text ", "none"])
 def test_explicit_choice_selects_exact_policy(choice: str) -> None:
-    assert parse_setup_choice(choice, VerificationPolicy.PHOTO).value == choice.strip().lower()
+    assert parse_setup_choice(choice).value == choice.strip().lower()
 
 
 def test_cancel_is_distinct_from_invalid_input() -> None:
     assert is_setup_cancel(" Cancel ")
     assert not is_setup_cancel("maybe")
-    assert parse_setup_choice("cancel", VerificationPolicy.PHOTO) is None
-    assert parse_setup_choice("maybe", VerificationPolicy.PHOTO) is None
+    assert parse_setup_choice("cancel") is None
+    assert parse_setup_choice("maybe") is None
 
 
 def test_confirmed_none_is_keyed_by_habit_id() -> None:
@@ -86,7 +86,5 @@ def test_boolean_habit_id_is_rejected() -> None:
 
 def test_format_setup_prompt_uses_required_copy() -> None:
     assert format_setup_prompt(HabitName("Gym"), VerificationPolicy.PHOTO) == (
-        'For "Gym", I recommend photo verification.\n'
-        "Reply 'yes' to use it, or choose: photo, quiz, text, none.\n"
-        "Reply 'cancel' to stop."
+        "For \"Gym\", I recommend photo verification.\nChoose: quiz, photo, text, or none.\nReply 'cancel' to stop."
     )
