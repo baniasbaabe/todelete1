@@ -103,7 +103,7 @@ async def test_photo_recommendation_completes_repository_backed_journey(test_ses
 
     await start_handler(_update("/start"), context)
     await add_habit_handler(_update("/add_habit Gym"), context)
-    await text_response_handler(_update("yes"), context)
+    await text_response_handler(_update("photo"), context)
     await checkin_handler(_update("/checkin"), context)
     await text_response_handler(_update("yes"), context)
     await photo_response_handler(_update(with_photo=True), context)
@@ -122,7 +122,7 @@ async def test_quiz_recommendation_completes_repository_backed_journey(test_sess
 
     await start_handler(_update("/start"), context)
     await add_habit_handler(_update("/add_habit Learn Python"), context)
-    await text_response_handler(_update("yes"), context)
+    await text_response_handler(_update("quiz"), context)
     await checkin_handler(_update("/checkin"), context)
     await text_response_handler(_update("yes"), context)
     await text_response_handler(_update("async context managers"), context)
@@ -135,3 +135,31 @@ async def test_quiz_recommendation_completes_repository_backed_journey(test_sess
     assert completions[0].verified is True
     assert completions[0].proof_type is ProofType.QUIZ
     assert "checkin_session" not in context.user_data
+
+
+async def test_new_setup_pauses_repository_backed_checkin(test_session: AsyncSession) -> None:
+    context = _context(test_session, VerificationPolicy.PHOTO)
+    await start_handler(_update("/start"), context)
+    await add_habit_handler(_update("/add_habit Gym"), context)
+    await text_response_handler(_update("photo"), context)
+    await checkin_handler(_update("/checkin"), context)
+    await text_response_handler(_update("yes"), context)
+    before = dict(context.user_data["checkin_session"])
+    await add_habit_handler(_update("/add_habit Read"), context)
+    choice = _update("text")
+
+    await text_response_handler(choice, context)
+
+    assert context.user_data["checkin_session"] == before
+    replies = [call.args[0] for call in choice.message.reply_text.await_args_list]
+    assert replies[0] == "Habit 'Read' created with text verification."
+    assert "Please send your photo proof:" in replies[1]
+
+    user = await SQLAlchemyUserRepository(test_session).find_by_telegram_id(TelegramId(TELEGRAM_ID))
+    assert user is not None
+    assert user.id is not None
+    habits = await SQLAlchemyHabitRepository(test_session).find_active_by_user(user.id)
+    assert {habit.name.value: habit.verification_policy for habit in habits} == {
+        "Gym": VerificationPolicy.PHOTO,
+        "Read": VerificationPolicy.TEXT,
+    }

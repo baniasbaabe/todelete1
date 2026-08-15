@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from telegram import Update
+from telegram import Message, Update
 from telegram.ext import ContextTypes
 
 from habit_tracker.application.checkin_session import CheckinSession
@@ -13,6 +13,27 @@ from habit_tracker.presentation.handlers.session_store import load_session, save
 from habit_tracker.presentation.handlers.verification_setup import prepare_current_habit
 
 
+async def resume_active_checkin(
+    context: ContextTypes.DEFAULT_TYPE,
+    message: Message,
+    heading: str,
+) -> bool:
+    """Repeat the exact prompt for a saved active check-in."""
+    if context.user_data is None:
+        return False
+    session = load_session(context)
+    if session is None or session.current_habit() is None:
+        return False
+    prompt = await prepare_current_habit(
+        session,
+        dependencies(context).verification_recommender,
+        context.user_data,
+    )
+    save_session(context, session)
+    await message.reply_text(f"{heading}\n\n{prompt}")
+    return True
+
+
 @trace("checkin", handler="checkin")
 async def checkin_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Start a check-in session."""
@@ -21,14 +42,8 @@ async def checkin_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     deps = dependencies(context)
     user_data = context.user_data
 
-    existing = load_session(context)
-    if existing:
-        habit = existing.current_habit()
-        if habit:
-            prompt = await prepare_current_habit(existing, deps.verification_recommender, user_data)
-            save_session(context, existing)
-            await update.message.reply_text(f"You have an active check-in.\n\n{prompt}")
-            return
+    if await resume_active_checkin(context, update.message, "You have an active check-in."):
+        return
 
     try:
         async with deps.unit_of_work() as uow:
