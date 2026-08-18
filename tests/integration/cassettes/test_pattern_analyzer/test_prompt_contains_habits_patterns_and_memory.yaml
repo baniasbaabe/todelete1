@@ -1,0 +1,117 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a supportive habit coach.
+      Generate a short, personal check-in message (2-3 sentences). Be encouraging
+      but specific."},{"role":"user","content":"User''s patterns:\n- You rarely complete
+      ''Run'' on Sundays\n\nPrior insights:\n- User prefers morning sessions\n\nToday''s
+      pending habits:\n- Morning Run\n- Meditation"}],"model":"qwen/qwen3.6-27b","temperature":0.2}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '406'
+      content-type:
+      - application/json
+      host:
+      - api.groq.com
+      user-agent:
+      - AsyncGroq/Python 1.6.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.6.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.0
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/+xXy3LbNhTd9ytuuYmtULQkynptMpm8mmmdeuy2mU7k0UDkpYiIAmgAtMxkPJNN
+        /6CbzvTr8iW9AB+y3DjtLlnEC5sG7+scnHtBvPd47M28KGUm2uRZdzo97o/G4373OMRJd5hEve6U
+        9XvdMMQpjgdsSSue78nlW4xM7RhEklzRcCnoVaSQGaSg/fFkFE7DcDL0vY2MMSPzyy2KI/srDEbd
+        wXhp7VPJI9Te7M17j4sYr71ZjxxQa7ZCb/beUzKjvx7TmmvDhLE+UhgUNv9czIteL4xMysXaPeJc
+        /IAKH2hg4Fa5WEGuJOXQMzIX/QCg03ksWFa+Q/hVo4KXIi/MrNOZCwDo0tszykn/w3mR51IZfoWQ
+        siU3EEkWpa3ZL0yvrdkLFKgINaXUKdn7kKPSklJAlGK07nIBNSI4GHRD0GgBUEmHu1hSuJTPRCQL
+        xVa27GVhQOcY8YRHraGtmNDlzBhUQlufM6YwK6HeB9Tw4KwQD0AKAiBiVurW+VRxqYALzVepcb6n
+        ChMqFjZSCZtTU520k/pWYRTBJkQRWwNHhHM9qV0omQ8nGHPDrAgsyQNH8suYcPKkhB+xhCcU1CjG
+        hdFgd2owgjO8LLjCDVnpHf0/oViZdAZ7RNXvHEu3tsUH3PHl3yXrpNAGHD4bY1azAaoQDX1+iztv
+        7Xwwn4QMB/cAbjbxuVQbZmbw5M6eW0JCR8hTxRJjCyNYJI4zTLhw8OHgvEYKyxKa58OGlE77tj/r
+        wONoLeQ2w5jkZFJssMDDtnDXINeGVhp6MAAXae69BCENtVzciAMiJmBJoRSP1iUkJJCSfCxN2q80
+        yG1qWqR0yjbDlpv0X4rxYZuWNjgYFq0zrKLc4gyUVR0QBdRzW+Y6s8iroh/NvTtIB4SUNCNo0JCJ
+        A6qRgMV1Kz4EmdCOga7EcNQitXwGNdhTxpVNQ/au5qqkdueqWrZMxfQ6yygBlUd8ZBufeIgKTSwZ
+        kpwjxVagkBQlkyoOlf3xw5/0+PHDX0TKyiJPuf6+geJ0YPei0T0hqqUy2Cn7EfyOOqjX7+t+Z+Tv
+        tKwbLX9Wx0tJkCvxBvc0UDXR9mr4ZP81FnMxdEp+zu10O5UZ12mjUtJWxcRXKTD4klroVkNBz27v
+        fADn9fZagTcD/aiZzkf1zt0WRQDP7SSyZ6I9YxJqjqx020JJHlPVt9RG48cENGNYXAYf//7Dmfxc
+        GDrqgMYUHUy6hmGHUAyxnU2t4ak9MTGup0bttqrOOSKrXn9zjlnSfSKVokJo+eg3VBZPRWhcOL5N
+        KgvCc3GbiJYEKrgQNDOfXTMLBejgOHjN7cHt9KeYWOHhvmfNGTflzA1SK43/PdrvGeHBXgrz+VPG
+        tUw342ts3CzzKynj+3gmqeRUZTOEa3J1w2Jt/aKl9wK61cfMt576ZE81NJ/U/O5aAV5JoJNPMUiy
+        IkkCeMqVewMsjim6ttaKPpSoNapBR+YkvcBNxub5fKexZqnqI7ivixI3D3M3DwnUFX1SWVk1hb55
+        StGDC2jOuP2ueSXp27Hull2PWd3mzZHxmnH6rKSvO3e6U8vsxgjxSQIvsqzcnfFfsWbmHhz0D7/s
+        +Uxf4VUFp5VwglZJbH+GBnf2+u58/FwLH/y3Pg6bcJ0DJ5DDTnOhOdq70czFtylwdxe9G9/L5Iqa
+        eUm3R0H69z1imfhd0BWUbl90PdRG5t7Nhe8VzW3yssACF4Zv6L9e0BuO++HxqBf6XjUUFkauUVC8
+        8WS31Bj3Rv3BZBoO7QW0ufG2DpPweH/defWDcTiZDEPKMnU/FNZI+vZv/ab9sF1qXIbD6XjQG9/U
+        dS+WBGgdy61ocOpSG9wsCO4KVU7c27twki+O+5NoSZl6SLfk68VKyUsL2t3xFV4uev31u1wk62u6
+        ob+96uvriTHlIE3zLdlrdNf2YW/a6w2nw9GNXVJXpDeqDBWFIFgxbpiIvZvv/gEAAP//AwBsSa5b
+        OhAAAA==
+    headers:
+      alt-svc:
+      - h3=":443"; ma=86400
+      cache-control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - a291b752beaedc05-MUC
+      connection:
+      - keep-alive
+      content-encoding:
+      - gzip
+      content-type:
+      - application/json
+      date:
+      - Mon, 10 Aug 2026 20:23:04 GMT
+      server:
+      - cloudflare
+      strict-transport-security:
+      - max-age=15552000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - fra
+      x-ratelimit-limit-requests:
+      - '1000'
+      x-ratelimit-limit-tokens:
+      - '8000'
+      x-ratelimit-remaining-requests:
+      - '996'
+      x-ratelimit-remaining-tokens:
+      - '7099'
+      x-ratelimit-reset-requests:
+      - 5m45.6s
+      x-ratelimit-reset-tokens:
+      - 6.757s
+    status:
+      code: 200
+      message: OK
+version: 1

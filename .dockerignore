@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.*
+!.env.azure.example
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Infrastructure
+infra/
+.terraform/
+*.tfstate
+*.tfstate.*
+.terragrunt-cache/
+
+# Documentation
+# README.md is needed for pyproject.toml build
+AGENTS.md
+docs/
+
+# Tests (when added)
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Misc
+.DS_Store
+Thumbs.db

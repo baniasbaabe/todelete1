@@ -1,0 +1,101 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are verifying if a user completed
+      their habit: ''Meditation''.\nDescription: No description provided.\nEvaluate
+      the proof and respond with JSON: {\"verified\": true/false, \"confidence\":
+      0.0-1.0, \"reasoning\": \"...\"}"},{"role":"user","content":"My proof: I meditated
+      for 20 minutes"}],"model":"qwen/qwen3.6-27b","reasoning_effort":"none","response_format":{"type":"json_object"},"temperature":0.0}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '444'
+      content-type:
+      - application/json
+      host:
+      - api.groq.com
+      user-agent:
+      - AsyncGroq/Python 1.6.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.6.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.0
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/1VTy47bMAy89ysInXYBJ5WfsfMdBXpoCkOW6FiNLTmSvEk2yL+XyiZBe7Egajic
+        Iekr04ptmRxEkNM8rnLJVd532aqXPa6KTIhV15d81eQb3vFikxZNxxJmuz8owyNxLS2lYtDW0JN0
+        KAISabqpqyIvqrpM2GQVjgQ/ntB8j598Xa2yTaSSg9USPdv+ujJtFJ7ZllMCei/2yLZX5uxIJxPe
+        ax+ECTHHmoAm1r/u2Ac63WtUO7aF4BZMYBcBvVZoJMYoXzcxSMK8NdrsY2zHfgwIi0cHeJ5HLXUY
+        L0AFAnoIA17g4QpVvIKQ0R/YHiZUmmDEA711IMDPKEmBBLU4cUe9ZRwmbRbiek/gNGg5gNKOWhZr
+        EMaT4HsZGESnAzg8LvQ+kak1/Bz0iGAsCQvojBgBP77MwNuoD6QF5sEGC7H6PIOnlqPxFHoH7WF2
+        NsJVcue/O4q88UmOKCjHqJfm9Y7d2C1ho91TXkdjMMs4JqzXRvuh/WoZ9dkHO7Pb74Qtz7EcF1yw
+        DXqiG1/zouZ5xbM6YcQzzaEN9kCi2Lb+J/QE802R1UVVxUk+V+eVUDX/hx9JaV7ypqhT2qZggxhf
+        +LTcvEJPbJGVWZ7V6e0huO3IyUHZk3ka9BdPfWnJ5x7d7PR9m/q5LdNadmXTcKQ9O7d7Z4/R7f0v
+        oSm1PD18Hk+nrOjw4kXBVajPg6/r7pPwHuPiV1nVNGVVZLcYcR+03qQMHTGQH4UTDYDdvv0FZbUT
+        4XsDAAA=
+    headers:
+      alt-svc:
+      - h3=":443"; ma=86400
+      cache-control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - a295a7ad9bbfc9e3-MUC
+      connection:
+      - keep-alive
+      content-encoding:
+      - gzip
+      content-type:
+      - application/json
+      date:
+      - Tue, 11 Aug 2026 07:51:25 GMT
+      server:
+      - cloudflare
+      strict-transport-security:
+      - max-age=15552000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - fra
+      x-ratelimit-limit-requests:
+      - '1000'
+      x-ratelimit-limit-tokens:
+      - '8000'
+      x-ratelimit-remaining-requests:
+      - '996'
+      x-ratelimit-remaining-tokens:
+      - '7707'
+      x-ratelimit-reset-requests:
+      - 5m45.6s
+      x-ratelimit-reset-tokens:
+      - 2.197s
+    status:
+      code: 200
+      message: OK
+version: 1

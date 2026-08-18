@@ -1,0 +1,94 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Return JSON with one field: {\"verified\":
+      true}"}],"model":"qwen/qwen3.6-27b","reasoning_effort":"none","response_format":{"type":"json_object"},"temperature":0.2}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '203'
+      content-type:
+      - application/json
+      host:
+      - api.groq.com
+      user-agent:
+      - AsyncGroq/Python 1.6.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.6.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.0
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/1VR0Y6bMBB871dE+wypARswv9KcEJglcQM22IbLNeLfu0RHqr7Y8npmdmb3CbqD
+        CtStCWqchrhUQrAem5ghJjHvZBu3aYOxUAqxVR1mUkIEtv2NKnwTz8oSFYO2hr6UwyYgiSZFmfMs
+        lSWPYLQdDgSfP9H83I/snMdp0e74m9UKPVS/nqBNhw+oGBHQ++aKUD3B2YFuaLzXPjQm7BxrApq9
+        //NiTqcLrOh0r7G7QHUKbsGL2WCLYLDXydmWxM0yDBH02mh/q8mhJ68V+GAn2D4iWI5m84IL1kGP
+        9GJnxsskSwsmIiCdcQp1sHc0pJel/0oHmKWC8yKXu79jIG9Cwv4vH6RESi7yhEjBhmZ443n6rhzQ
+        NOWSZWW5ffutWwpy7+ynOfL5Lx9wrCnmFd3k9GtE/VSLpFStkJIhDe9RX52d97Cv1Tuca5bc/8xr
+        KfIR577MyvXRy/HBb3wlvMfXNkUuCs4kE9tecistjayhIwnK0+HYmA62H38BrAbsjlECAAA=
+    headers:
+      alt-svc:
+      - h3=":443"; ma=86400
+      cache-control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - a2957e27a8c499f5-MUC
+      connection:
+      - keep-alive
+      content-encoding:
+      - gzip
+      content-type:
+      - application/json
+      date:
+      - Tue, 11 Aug 2026 07:23:04 GMT
+      server:
+      - cloudflare
+      strict-transport-security:
+      - max-age=15552000
+      transfer-encoding:
+      - chunked
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - fra
+      x-ratelimit-limit-requests:
+      - '1000'
+      x-ratelimit-limit-tokens:
+      - '8000'
+      x-ratelimit-remaining-requests:
+      - '998'
+      x-ratelimit-remaining-tokens:
+      - '7967'
+      x-ratelimit-reset-requests:
+      - 2m52.8s
+      x-ratelimit-reset-tokens:
+      - 247ms
+    status:
+      code: 200
+      message: OK
+version: 1

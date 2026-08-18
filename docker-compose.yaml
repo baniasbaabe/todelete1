@@ -1,0 +1,46 @@
+services:
+  phoenix:
+    image: arizephoenix/phoenix:version-19.6.0
+    container_name: arize-phoenix
+    depends_on:
+      - db
+    # Bound to loopback: the short "6006:6006" form listens on 0.0.0.0, which
+    # publishes the UI (and the LLM prompt/response payloads in its traces) to
+    # every host on the local network.
+    ports:
+      - "127.0.0.1:6006:6006"  # Phoenix UI and OTLP HTTP collector
+      - "127.0.0.1:4317:4317"  # OTLP gRPC collector
+      - "127.0.0.1:9090:9090"  # Optional: Prometheus metrics
+    environment:
+      # Separate database, mirroring the production split so Phoenix never
+      # shares one with the Alembic-managed application tables.
+      - PHOENIX_SQL_DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/phoenix
+      # Match infra/modules/phoenix/main.tf so local runs exercise auth too.
+      - PHOENIX_ENABLE_AUTH=true
+      - PHOENIX_SECRET=${PHOENIX_SECRET:-local-dev-secret-change-me-0123456789}
+    restart: unless-stopped
+
+
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: postgres-pgvector
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=habit_tracker
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/local-init-db.sql:/docker-entrypoint-initdb.d/10-phoenix-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d habit_tracker"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+
+volumes:
+  postgres_data:
+    driver: local
