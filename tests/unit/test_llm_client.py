@@ -19,7 +19,7 @@ def test_client_stores_defaults() -> None:
         llm_temperature=0.2,
         jina_embedding_model="jina-embeddings-v5-text-small",
         mem0_embedding_dims=1024,
-        mem0_collection_name="mem0_jina",
+        mem0_collection_name="memories",
         mem0_telemetry=False,
         collector_endpoint=None,
         enable_tracing=False,

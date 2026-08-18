@@ -19,7 +19,7 @@ _BASE_SETTINGS: dict[str, object] = {
     "llm_temperature": 0.2,
     "jina_embedding_model": "jina-embeddings-v5-text-small",
     "mem0_embedding_dims": 1024,
-    "mem0_collection_name": "mem0_jina",
+    "mem0_collection_name": "memories",
     "mem0_telemetry": False,
     "collector_endpoint": None,
     "enable_tracing": False,
@@ -58,7 +58,7 @@ def test_provider_stack_comes_from_typed_settings() -> None:
     assert config["embedder"]["provider"] == "langchain"
     assert embeddings.model_name == "jina-embeddings-v5-text-small"
     assert config["vector_store"]["config"]["embedding_model_dims"] == 1024
-    assert config["vector_store"]["config"]["collection_name"] == "mem0_jina"
+    assert config["vector_store"]["config"]["collection_name"] == "memories"
     assert config["custom_instructions"] == MEM0_CUSTOM_INSTRUCTIONS
     assert "habit-tracking" in config["custom_instructions"]
     assert parsed_config.custom_instructions == MEM0_CUSTOM_INSTRUCTIONS
