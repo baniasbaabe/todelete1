@@ -35,7 +35,7 @@ class Settings(DatabaseSettings):
     llm_temperature: float = 0.2
     jina_embedding_model: str = "jina-embeddings-v5-text-small"
     mem0_embedding_dims: int = Field(default=1024, gt=0)
-    mem0_collection_name: str = "mem0_jina"
+    mem0_collection_name: str = "memories"
     mem0_telemetry: bool = False
     collector_endpoint: str | None = None
     enable_tracing: bool = False

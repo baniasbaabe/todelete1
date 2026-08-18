@@ -1,0 +1,37 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"Recommend habit verification.
+      Return JSON with exactly one key, verification_policy, valued photo, quiz, text,
+      or none. Use photo for visible activity, quiz for learning, text for written
+      evidence, and none only when verification is impractical."},{"role":"user","content":"Habit:
+      Learn Python"}],"model":"qwen/qwen3.6-27b","reasoning_effort":"none","response_format":{"type":"json_object"},"temperature":0.0}'
+    headers:
+      accept:
+      - application/json
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      host:
+      - api.groq.com
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        eyJjaG9pY2VzIjpbeyJmaW5pc2hfcmVhc29uIjoic3RvcCIsImluZGV4IjowLCJsb2dwcm9icyI6
+        bnVsbCwibWVzc2FnZSI6eyJjb250ZW50Ijoie1xuICBcInZlcmlmaWNhdGlvbl9wb2xpY3lcIjog
+        XCJxdWl6XCJcbn0iLCJyb2xlIjoiYXNzaXN0YW50In19XSwiY3JlYXRlZCI6MCwiaWQiOiJjaGF0
+        Y21wbC12Y3IiLCJtb2RlbCI6InF3ZW4vcXdlbjMuNi0yN2IiLCJvYmplY3QiOiJjaGF0LmNvbXBs
+        ZXRpb24iLCJzeXN0ZW1fZmluZ2VycHJpbnQiOiJmcF92Y3IiLCJ1c2FnZSI6eyJjb21wbGV0aW9u
+        X3RpbWUiOjAsImNvbXBsZXRpb25fdG9rZW5zIjoxMywicHJvbXB0X3RpbWUiOjAsInByb21wdF90
+        b2tlbnMiOjc1LCJxdWV1ZV90aW1lIjowLCJ0b3RhbF90aW1lIjowLCJ0b3RhbF90b2tlbnMiOjg4
+        fSwidXNhZ2VfYnJlYWtkb3duIjpudWxsLCJ4X2dyb3EiOnsiaWQiOiJyZXFfdmNyIiwic2VlZCI6
+        MH19
+    headers:
+      content-type:
+      - application/json
+    status:
+      code: 200
+      message: OK
+version: 1

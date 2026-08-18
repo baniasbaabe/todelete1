@@ -1,0 +1,37 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"Recommend habit verification.
+      Return JSON with exactly one key, verification_policy, valued photo, quiz, text,
+      or none. Use photo for visible activity, quiz for learning, text for written
+      evidence, and none only when verification is impractical."},{"role":"user","content":"Habit:
+      Gym workout"}],"model":"qwen/qwen3.6-27b","reasoning_effort":"none","response_format":{"type":"json_object"},"temperature":0.0}'
+    headers:
+      accept:
+      - application/json
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      host:
+      - api.groq.com
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        eyJjaG9pY2VzIjpbeyJmaW5pc2hfcmVhc29uIjoic3RvcCIsImluZGV4IjowLCJsb2dwcm9icyI6
+        bnVsbCwibWVzc2FnZSI6eyJjb250ZW50Ijoie1xuICBcInZlcmlmaWNhdGlvbl9wb2xpY3lcIjog
+        XCJwaG90b1wiXG59Iiwicm9sZSI6ImFzc2lzdGFudCJ9fV0sImNyZWF0ZWQiOjAsImlkIjoiY2hh
+        dGNtcGwtdmNyIiwibW9kZWwiOiJxd2VuL3F3ZW4zLjYtMjdiIiwib2JqZWN0IjoiY2hhdC5jb21w
+        bGV0aW9uIiwic3lzdGVtX2ZpbmdlcnByaW50IjoiZnBfdmNyIiwidXNhZ2UiOnsiY29tcGxldGlv
+        bl90aW1lIjowLCJjb21wbGV0aW9uX3Rva2VucyI6MTMsInByb21wdF90aW1lIjowLCJwcm9tcHRf
+        dG9rZW5zIjo3NSwicXVldWVfdGltZSI6MCwidG90YWxfdGltZSI6MCwidG90YWxfdG9rZW5zIjo4
+        OH0sInVzYWdlX2JyZWFrZG93biI6bnVsbCwieF9ncm9xIjp7ImlkIjoicmVxX3ZjciIsInNlZWQi
+        OjB9fQ==
+    headers:
+      content-type:
+      - application/json
+    status:
+      code: 200
+      message: OK
+version: 1

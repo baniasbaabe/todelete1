@@ -6,7 +6,9 @@ from habit_tracker.application.dtos.memory_dto import MemoryInsight
 from habit_tracker.application.dtos.pattern_dto import BehavioralPattern, CheckinContext
 from habit_tracker.domain.entities.completion import Completion
 from habit_tracker.domain.entities.habit import Habit
+from habit_tracker.domain.value_objects.habit_name import HabitName
 from habit_tracker.domain.value_objects.proof_result import ProofResult
+from habit_tracker.domain.value_objects.verification_policy import VerificationPolicy
 
 
 class ProofVerifier(Protocol):
@@ -14,6 +16,10 @@ class ProofVerifier(Protocol):
     async def verify_image(self, habit: Habit, image_bytes: bytes) -> ProofResult: ...
     async def generate_quiz(self, habit: Habit, topic: str) -> str: ...
     async def evaluate_quiz_answer(self, habit: Habit, question: str, answer: str) -> ProofResult: ...
+
+
+class VerificationRecommender(Protocol):
+    async def recommend(self, habit_name: HabitName) -> VerificationPolicy: ...
 
 
 class MemoryStore(Protocol):

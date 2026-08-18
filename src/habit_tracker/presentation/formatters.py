@@ -10,7 +10,7 @@ def format_help() -> str:
     return (
         "Available commands:\n"
         "/start - Register and get started\n"
-        "/add_habit <name> [--verify text|photo|quiz] - Add a new habit\n"
+        "/add_habit <name> - Add a habit and choose verification\n"
         "/list_habits - Show your active habits\n"
         "/delete_habit <name> - Remove a habit\n"
         "/checkin - Start daily check-in\n"
@@ -36,6 +36,11 @@ def format_checkin_prompt(habit: Habit) -> str:
         proof_type = habit.verification_policy.value
         return f"Did you complete '{habit.name.value}'? Reply 'yes' to submit {proof_type} proof, or 'skip'."
     return f"Did you complete '{habit.name.value}'? (yes/skip)"
+
+
+def format_verification_setup_complete(habit: Habit) -> str:
+    """Confirm a verification choice and continue with the normal prompt."""
+    return f"Verification set to {habit.verification_policy.value}.\n\n{format_checkin_prompt(habit)}"
 
 
 def format_checkin_summary(summary: CompletionSummary) -> str:

@@ -2,6 +2,7 @@ from habit_tracker.domain.entities.habit import Habit
 from habit_tracker.domain.value_objects import HabitName, VerificationPolicy
 from habit_tracker.domain.value_objects.completion_summary import CompletionSummary
 from habit_tracker.domain.value_objects.streak import Streak
+from habit_tracker.presentation import formatters
 from habit_tracker.presentation.formatters import (
     format_checkin_prompt,
     format_checkin_summary,
@@ -16,6 +17,8 @@ class TestFormatters:
         assert "/start" in text
         assert "/add_habit" in text
         assert "/checkin" in text
+        assert "/add_habit <name> - Add a habit and choose verification" in text
+        assert "--verify" not in text
 
     def test_format_habit_list_empty(self):
         text = format_habit_list([], [])
@@ -66,6 +69,15 @@ class TestFormatters:
         text = format_checkin_prompt(h)
         assert "run" in text
         assert "photo" in text.lower()
+
+    def test_format_verification_setup_complete_continues_with_checkin_prompt(self):
+        h = Habit.create(user_id=1, name=HabitName("run"), verification_policy=VerificationPolicy.PHOTO)
+
+        text = formatters.format_verification_setup_complete(h)
+
+        assert text == (
+            "Verification set to photo.\n\nDid you complete 'run'? Reply 'yes' to submit photo proof, or 'skip'."
+        )
 
     def test_format_checkin_summary_encouragement(self):
         s = CompletionSummary(total=3, completed=3)

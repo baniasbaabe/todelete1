@@ -24,6 +24,7 @@ class TestQuizVerification:
         result = await uc.execute(_quiz_habit(), proof_text="4", quiz_question="What is 2+2?")
         assert result.verified is True
         assert result.completion is not None
+        assert len(await repo.find_today_by_habits([1])) == 1
 
     async def test_quiz_rejected(self):
         repo = InMemoryCompletionRepository()

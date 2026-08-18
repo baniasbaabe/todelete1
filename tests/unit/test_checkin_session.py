@@ -5,7 +5,7 @@ from habit_tracker.application.checkin_session import (
     SessionState,
 )
 from habit_tracker.domain.entities.habit import Habit
-from habit_tracker.domain.value_objects import HabitName
+from habit_tracker.domain.value_objects import HabitName, VerificationPolicy
 
 
 def _make_habit(name: str, habit_id: int = 1) -> Habit:
@@ -72,3 +72,30 @@ class TestCheckinSession:
         assert restored.current_index == session.current_index
         assert restored.state == session.state
         assert len(restored.habits) == len(session.habits)
+
+    def test_verification_setup_state_round_trips(self):
+        session = CheckinSession.start(user_id=1, habits=[_make_habit("gym", 1)])
+        session.state = SessionState.AWAITING_VERIFICATION_SETUP
+        session.verification_recommendation = VerificationPolicy.PHOTO
+
+        restored = CheckinSession.from_dict(session.to_dict())
+
+        assert restored.state is SessionState.AWAITING_VERIFICATION_SETUP
+        assert restored.verification_recommendation is VerificationPolicy.PHOTO
+
+    def test_old_session_without_recommendation_still_decodes(self):
+        session = CheckinSession.start(user_id=1, habits=[_make_habit("gym", 1)])
+        data = session.to_dict()
+        data.pop("verification_recommendation")
+
+        restored = CheckinSession.from_dict(data)
+
+        assert restored.verification_recommendation is None
+
+    def test_advance_clears_verification_recommendation(self):
+        session = CheckinSession.start(user_id=1, habits=[_make_habit("gym", 1), _make_habit("read", 2)])
+        session.verification_recommendation = VerificationPolicy.PHOTO
+
+        session.advance()
+
+        assert session.verification_recommendation is None

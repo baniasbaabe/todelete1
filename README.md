@@ -53,7 +53,7 @@ MEM0_COLLECTION_NAME=mem0_jina
 
 ```text
 /start
-/add_habit <name> [--verify text|photo|quiz]
+/add_habit <name>
 /list_habits
 /delete_habit <name>
 /checkin

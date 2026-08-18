@@ -15,6 +15,7 @@ from habit_tracker.domain.exceptions import (
 )
 from habit_tracker.domain.value_objects import HabitName, TelegramId
 from habit_tracker.domain.value_objects.proof_result import ProofResult
+from habit_tracker.domain.value_objects.verification_policy import VerificationPolicy
 
 
 class InMemoryUserRepository:
@@ -123,6 +124,16 @@ class FakeProofVerifier:
 
     async def evaluate_quiz_answer(self, habit, question, answer):
         return ProofResult(verified=self._result_verified, confidence=0.9, reasoning="test quiz")
+
+
+class FakeVerificationRecommender:
+    def __init__(self, policy: VerificationPolicy = VerificationPolicy.TEXT) -> None:
+        self.policy = policy
+        self.names: list[str] = []
+
+    async def recommend(self, habit_name: HabitName) -> VerificationPolicy:
+        self.names.append(habit_name.value)
+        return self.policy
 
 
 class FakePatternAnalyzer:

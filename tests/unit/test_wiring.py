@@ -16,6 +16,13 @@ from telegram.ext import ApplicationBuilder, BasePersistence, PersistenceInput
 from habit_tracker.domain.exceptions import ConfigurationError
 from habit_tracker.infrastructure.persistence.postgres_persistence import PostgresPersistence
 from habit_tracker.presentation.dependencies import Dependencies, dependencies, install
+from habit_tracker.presentation.handlers.flow_handlers import (
+    interrupt_pending_setup_handler,
+    resume_checkin_after_command_handler,
+    unknown_command_handler,
+)
+from habit_tracker.presentation.main import register_handlers
+from tests.unit.conftest import FakeVerificationRecommender
 
 
 class _StubPersistence(BasePersistence):
@@ -62,11 +69,13 @@ class _StubPersistence(BasePersistence):
 
 
 def _fake_dependencies() -> Dependencies:
+    recommender = FakeVerificationRecommender()
     return Dependencies(
         db=SimpleNamespace(),
         proof_verifier=SimpleNamespace(),
         memory_store=SimpleNamespace(),
         pattern_analyzer=SimpleNamespace(),
+        verification_recommender=recommender,
     )
 
 
@@ -97,6 +106,7 @@ class TestDependencyWiring:
         install(app, deps)
 
         assert dependencies(_context_for(app)) is deps
+        assert dependencies(_context_for(app)).verification_recommender is deps.verification_recommender
 
     async def test_wiring_before_initialization_would_be_lost_if_bot_data_persisted(self) -> None:
         """Guards the reason the flag matters: with bot_data=True the wiring vanishes."""
@@ -123,3 +133,13 @@ class TestDependencyWiring:
 
         with pytest.raises(ConfigurationError, match="Found: str"):
             dependencies(_context_for(app))
+
+
+def test_command_lifecycle_handlers_surround_normal_commands() -> None:
+    app = ApplicationBuilder().token("123:ABC").build()
+
+    register_handlers(app)
+
+    assert [handler.callback for handler in app.handlers[-1]] == [interrupt_pending_setup_handler]
+    assert unknown_command_handler in [handler.callback for handler in app.handlers[0]]
+    assert [handler.callback for handler in app.handlers[1]] == [resume_checkin_after_command_handler]

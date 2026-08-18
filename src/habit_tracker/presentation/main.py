@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import structlog
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 from habit_tracker.infrastructure.ai.llm_client import GroqLLMClient
 from habit_tracker.infrastructure.ai.pattern_analyzer import LLMPatternAnalyzer
 from habit_tracker.infrastructure.ai.proof_verifier import LLMProofVerifier
+from habit_tracker.infrastructure.ai.verification_recommender import (
+    LLMVerificationRecommender,
+    SafeVerificationRecommender,
+)
 from habit_tracker.infrastructure.config.settings import Settings
 from habit_tracker.infrastructure.database.connection import DatabaseSessionManager
 from habit_tracker.infrastructure.logging.logger import configure_logging
@@ -22,6 +26,11 @@ from habit_tracker.presentation.handlers.command_handlers import (
     list_habits_handler,
     start_handler,
 )
+from habit_tracker.presentation.handlers.flow_handlers import (
+    interrupt_pending_setup_handler,
+    resume_checkin_after_command_handler,
+    unknown_command_handler,
+)
 from habit_tracker.presentation.handlers.proof_handlers import (
     photo_response_handler,
     text_response_handler,
@@ -36,6 +45,21 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text("Something went wrong. Please try again later.")
 
 
+def register_handlers(app: Application) -> None:
+    """Register lifecycle, command, and response handlers."""
+    app.add_handler(MessageHandler(filters.COMMAND, interrupt_pending_setup_handler), group=-1)
+    app.add_handler(CommandHandler("start", start_handler))
+    app.add_handler(CommandHandler("add_habit", add_habit_handler))
+    app.add_handler(CommandHandler("list_habits", list_habits_handler))
+    app.add_handler(CommandHandler("delete_habit", delete_habit_handler))
+    app.add_handler(CommandHandler("help", help_handler))
+    app.add_handler(CommandHandler("checkin", checkin_handler))
+    app.add_handler(MessageHandler(filters.COMMAND, unknown_command_handler))
+    app.add_handler(MessageHandler(filters.PHOTO, photo_response_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_response_handler))
+    app.add_handler(MessageHandler(filters.COMMAND, resume_checkin_after_command_handler), group=1)
+
+
 def main() -> None:
     configure_logging()
     settings = Settings()
@@ -46,6 +70,7 @@ def main() -> None:
     db = DatabaseSessionManager(settings.database_url)
     llm = GroqLLMClient(settings.groq_api_key, settings.llm_model, settings.llm_temperature)
     proof_verifier = LLMProofVerifier(llm)
+    verification_recommender = SafeVerificationRecommender(LLMVerificationRecommender(llm))
     memory_store = Mem0MemoryStore(settings.get_mem0_config(), telemetry_enabled=settings.mem0_telemetry)
     pattern_analyzer = LLMPatternAnalyzer(llm, memory_store)
     persistence = PostgresPersistence(settings.database_url)
@@ -57,6 +82,7 @@ def main() -> None:
         proof_verifier=proof_verifier,
         memory_store=memory_store,
         pattern_analyzer=pattern_analyzer,
+        verification_recommender=verification_recommender,
     )
 
     # post_init runs after Application.initialize(), which reassigns bot_data
@@ -66,14 +92,7 @@ def main() -> None:
 
     app.post_init = wire_dependencies
 
-    app.add_handler(CommandHandler("start", start_handler))
-    app.add_handler(CommandHandler("add_habit", add_habit_handler))
-    app.add_handler(CommandHandler("list_habits", list_habits_handler))
-    app.add_handler(CommandHandler("delete_habit", delete_habit_handler))
-    app.add_handler(CommandHandler("help", help_handler))
-    app.add_handler(CommandHandler("checkin", checkin_handler))
-    app.add_handler(MessageHandler(filters.PHOTO, photo_response_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_response_handler))
+    register_handlers(app)
     app.add_error_handler(error_handler)
 
     async def shutdown_cleanup(app_instance: object) -> None:
