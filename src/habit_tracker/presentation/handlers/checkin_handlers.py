@@ -34,7 +34,7 @@ async def resume_active_checkin(
     return True
 
 
-@trace("checkin", handler="checkin")
+@trace("checkin", save_context=True, handler="checkin")
 async def checkin_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Start a check-in session."""
     if not update.message or not update.effective_user or context.user_data is None:

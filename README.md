@@ -45,7 +45,7 @@ embeddings:
 JINA_API_KEY=your-jina-api-key
 JINA_EMBEDDING_MODEL=jina-embeddings-v5-text-small
 MEM0_EMBEDDING_DIMS=1024
-MEM0_COLLECTION_NAME=mem0_jina
+MEM0_COLLECTION_NAME=memories
 ```
 
 
@@ -75,8 +75,10 @@ Testcontainer and replay committed VCR.py recordings. To create missing API
 recordings with the Groq and Jina keys in `.env`, run `just record-cassettes`.
 
 Phoenix is available at `http://localhost:6006` after `just setup` or `just dev`.
-Create an API key in Phoenix, set `PHOENIX_API_KEY`, and then set
-`ENABLE_TRACING=true` when you want the bot to send local traces.
+The default credentials are `admin@localhost` / `admin`. Log in, create a
+project (e.g. `habit-tracker`), then go to **Settings → API Keys** to generate
+a key. Set `PHOENIX_API_KEY` to that key and `ENABLE_TRACING=true` when you
+want the bot to send local traces.
 
 ## Project layout
 

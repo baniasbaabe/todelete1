@@ -11,6 +11,7 @@ from __future__ import annotations
 from telegram.ext import ContextTypes
 
 from habit_tracker.application.checkin_session import CheckinSession
+from habit_tracker.infrastructure.observability.tracing import TRACE_CARRIER_KEY
 
 SESSION_KEY = "checkin_session"
 
@@ -47,3 +48,4 @@ def save_session(context: ContextTypes.DEFAULT_TYPE, session: CheckinSession) ->
 def clear_session(context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.user_data is not None:
         context.user_data.pop(SESSION_KEY, None)
+        context.user_data.pop(TRACE_CARRIER_KEY, None)
