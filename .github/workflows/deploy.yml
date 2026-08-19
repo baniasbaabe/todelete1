@@ -129,7 +129,7 @@ jobs:
       LLM_TEMPERATURE: ${{ vars.LLM_TEMPERATURE || '0.2' }}
       JINA_EMBEDDING_MODEL: ${{ vars.JINA_EMBEDDING_MODEL || 'jina-embeddings-v5-text-small' }}
       MEM0_EMBEDDING_DIMS: ${{ vars.MEM0_EMBEDDING_DIMS || '1024' }}
-      MEM0_COLLECTION_NAME: ${{ vars.MEM0_COLLECTION_NAME || 'mem0_jina' }}
+      MEM0_COLLECTION_NAME: ${{ vars.MEM0_COLLECTION_NAME || 'memories' }}
       TERRAGRUNT_TFPATH: tofu
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

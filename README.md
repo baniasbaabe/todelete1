@@ -104,6 +104,8 @@ uv run alembic upgrade head
 Azure deployment uses GitHub Actions with OIDC. There is no Azure client secret
 and no `.env.azure` file.
 
+Local tools required: `az`, `tofu`, `terragrunt`, `docker`, `psql`, `uv`.
+
 The one-time bootstrap needs an Azure subscription, permission to create role
 assignments and a Microsoft Entra application, and a resource-group name chosen
 by you.
@@ -122,8 +124,12 @@ secrets to add to the GitHub `production` environment. After adding them, open
 Terragrunt then creates ACR, Key Vault, PostgreSQL, Phoenix, and the Web App.
 Future pushes to `main` deploy only the paths that changed.
 
+After the first infrastructure deploy, run `./scripts/post-deploy.sh` once to
+create a Phoenix API key and enable tracing on the Web App. Without this step
+the bot runs but sends no traces.
+
 Read the [Azure deployment guide](docs/azure-deployment.md) for the full setup,
-security model, troubleshooting, and cleanup.
+all required GitHub secrets and variables, troubleshooting, and cleanup.
 
 ## Configuration
 
