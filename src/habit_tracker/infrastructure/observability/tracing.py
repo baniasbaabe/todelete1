@@ -5,6 +5,7 @@ from functools import wraps
 from openinference.instrumentation.groq import GroqInstrumentor
 from opentelemetry.context import attach, detach
 from opentelemetry.propagate import extract, inject
+from opentelemetry.trace import StatusCode
 from phoenix.otel import register
 import structlog
 
@@ -66,13 +67,37 @@ def trace(name: str, save_context: bool = False, **attributes: str):
                 if carrier:
                     token = attach(extract(carrier))
 
+            # Locate the Telegram Update (has .effective_user and .message).
+            update = None
+            for arg in args:
+                if hasattr(arg, "effective_user") and hasattr(arg, "message"):
+                    update = arg
+                    break
+
             try:
-                with _tracer.start_as_current_span(name, attributes=attributes):
+                with _tracer.start_as_current_span(name, attributes=attributes) as span:
+                    span.set_attribute("openinference.span.kind", "CHAIN")
+                    if update is not None:
+                        if update.effective_user:
+                            span.set_attribute("user.id", str(update.effective_user.id))
+                        if update.message:
+                            if update.message.text:
+                                span.set_attribute("input.value", update.message.text)
+                            elif update.message.photo:
+                                span.set_attribute("input.value", "[photo]")
+
                     if save_context and user_data is not None:
                         carrier: dict[str, str] = {}
                         inject(carrier)
                         user_data[TRACE_CARRIER_KEY] = carrier
-                    return await func(*args, **kwargs)
+                    try:
+                        result = await func(*args, **kwargs)
+                    except Exception as exc:
+                        span.set_status(StatusCode.ERROR, str(exc))
+                        raise
+                    else:
+                        span.set_status(StatusCode.OK)
+                        return result
             finally:
                 if token is not None:
                     detach(token)
