@@ -19,10 +19,19 @@ from habit_tracker.infrastructure.memory.mem0_store import Mem0MemoryStore
 
 
 @pytest.fixture
-def mem0_provider_cassette(vcr_config: VCR) -> Generator[Cassette]:
-    """Replay the shared provider exchange used by Mem0 persistence tests."""
+def mem0_provider_cassette(vcr_config: VCR, integration_test_settings) -> Generator[Cassette]:
+    """Replay the shared provider exchange used by Mem0 persistence tests.
+
+    When ``record_cassettes`` is true (set via the ``RECORD_CASSETTES`` env var),
+    the fixture records new HTTP interactions against the real Groq and Jina
+    APIs and overwrites the committed cassette. Otherwise it replays the
+    cassette without recording, which is the default for CI.
+    """
+    from tests.settings import IntegrationTestSettings
+
     cassette_path = Path(__file__).parent / "cassettes/test_mem0_store/test_store_and_retrieve_real_memory.yaml"
-    with vcr_config.use_cassette(str(cassette_path), record_mode="none") as recorded:
+    record_mode = "all" if integration_test_settings.record_cassettes else "none"
+    with vcr_config.use_cassette(str(cassette_path), record_mode=record_mode) as recorded:
         yield recorded
 
 
