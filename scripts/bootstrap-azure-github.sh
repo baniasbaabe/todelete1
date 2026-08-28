@@ -112,7 +112,11 @@ fi
 
 export AZURE_RESOURCE_GROUP="$resource_group"
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-"$script_dir/bootstrap.sh"
+# Invoke via `bash` so a missing +x bit on bootstrap.sh (which would otherwise
+# fail with "Permission denied") never halts the bootstrap mid-way. The Azure
+# identity pieces created before this point are idempotent, so re-running the
+# whole script after fixing permissions resumes cleanly.
+bash "$script_dir/bootstrap.sh"
 
 project_root=$(cd "$script_dir/.." && pwd)
 # shellcheck disable=SC1091
