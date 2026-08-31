@@ -142,10 +142,16 @@ Destroys all Terragrunt-managed resources. The resource group itself is not dele
 
 **Tracing not appearing in Phoenix**: Check that `ENABLE_TRACING=true` and `PHOENIX_API_KEY` are set as Web App application settings. Re-run `./scripts/post-deploy.sh` if needed.
 
+**Phoenix crashes with `PhoenixMigrationError` on first deploy**: The infra job creates the Phoenix Container App before `bootstrap-db-roles.sh` has created the `phoenix_app` database role. Trigger the Deploy workflow with "Build, migrate, and deploy the bot" checked — the deploy-app job creates the roles and restarts Phoenix automatically.
+
+**Phoenix crashes with `TimeoutError` connecting to PostgreSQL**: The Container App's egress IP may not match the firewall rule. As a workaround, add `AllowAzureServices` (`0.0.0.0-0.0.0.0`) via the Azure portal or CLI: `az postgres flexible-server firewall-rule create -g <rg> -s <server> --name AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0`. For production, use VNet integration instead.
+
 **`bootstrap-db-roles.sh` fails with permission denied**: It must run as the PostgreSQL server admin (the credential in `DATABASE_URL`), not the `habit_app` runtime role.
 
 **Firewall blocks local `deploy-bot.sh`**: The script opens a firewall rule for your current public IP automatically, but corporate VPNs may change your IP mid-run. Disconnect from the VPN or run from a static IP.
 
 **Azure login fails with `AADSTS700213: No matching federated identity record`**: GitHub changed their OIDC token format to include numeric owner and repo IDs in the subject claim (e.g. `repo:owner@123/repo@456:environment:production`). Re-run `./scripts/bootstrap-azure-github.sh` -- it now fetches the IDs from the GitHub API and updates the existing federated credential automatically.
+
+**Lost `PBKDF2_PASSPHRASE`**: CI still works (the secret is set in GitHub), but you cannot run Terragrunt locally. Generate a new passphrase, update the GitHub secret, and run a full infra deploy to re-encrypt state. Store the passphrase in a password manager.
 
 **`bootstrap-azure-github.sh` fails with `Permission denied` on `bootstrap.sh`**: `bootstrap-azure-github.sh` shells out to `scripts/bootstrap.sh` to create the Terragrunt state storage account. If `bootstrap.sh` was checked in without the execute bit (common on Windows clones or fresh checkouts), the outer script aborts *after* creating the Entra app, federated credential, and role assignments but *before* creating the storage account. Fix with `chmod +x scripts/bootstrap.sh` and re-run. The script is now invoked via `bash` so a missing `+x` bit won't block the bootstrap. The Azure identity pieces are idempotent — re-running picks up where it left off, and `bootstrap.sh` itself detects an existing storage account and skips re-creation.
