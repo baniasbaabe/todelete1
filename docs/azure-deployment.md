@@ -59,6 +59,7 @@ The script:
 | `JINA_EMBEDDING_MODEL` | `jina-embeddings-v5-text-small` |
 | `MEM0_EMBEDDING_DIMS` | `1024` |
 | `MEM0_COLLECTION_NAME` | `memories` |
+| `OPERATOR_OBJECT_IDS` | printed by bootstrap (your Azure AD object ID; comma-separate for multiple operators) |
 
 ---
 

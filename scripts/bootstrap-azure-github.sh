@@ -153,6 +153,8 @@ project_root=$(cd "$script_dir/.." && pwd)
 # shellcheck disable=SC1091
 source "$project_root/.tfstate-config"
 
+operator_oid=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)
+
 echo ""
 echo "Azure bootstrap complete. Configure the GitHub '$github_environment' environment with:"
 echo ""
@@ -174,5 +176,8 @@ echo "  LLM_TEMPERATURE=0.2"
 echo "  JINA_EMBEDDING_MODEL=jina-embeddings-v5-text-small"
 echo "  MEM0_EMBEDDING_DIMS=1024"
 echo "  MEM0_COLLECTION_NAME=memories"
+if [[ -n "$operator_oid" ]]; then
+    echo "  OPERATOR_OBJECT_IDS=$operator_oid  (your Azure AD object ID; comma-separate for multiple operators)"
+fi
 echo ""
 echo "Then run the Deploy workflow manually with both options enabled."

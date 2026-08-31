@@ -43,3 +43,9 @@ variable "log_analytics_workspace_id" {
   description = "Resource ID of the shared Log Analytics Workspace for diagnostic settings"
   type        = string
 }
+
+variable "operator_object_ids" {
+  description = "Azure AD object IDs of human operators who need portal/CLI access to Key Vault secrets"
+  type        = list(string)
+  default     = []
+}

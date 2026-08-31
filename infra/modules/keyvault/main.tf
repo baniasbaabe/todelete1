@@ -36,6 +36,14 @@ resource "azurerm_role_assignment" "terraform_kv_admin" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
+# RBAC role assignment for human operators (portal and CLI access)
+resource "azurerm_role_assignment" "operator_kv_access" {
+  for_each             = toset(var.operator_object_ids)
+  scope                = azurerm_key_vault.main.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = each.value
+}
+
 # Generate random password for PostgreSQL admin
 #
 # override_special is restricted to RFC 3986 "unreserved" characters. These
