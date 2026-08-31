@@ -88,7 +88,10 @@ async def memory_store(
             await connection.execute(text("DROP SCHEMA IF EXISTS mem0 CASCADE"))
 
 
-async def test_store_and_retrieve_real_memory(memory_store: Mem0MemoryStore, cassette) -> None:
+async def test_store_and_retrieve_real_memory(
+    memory_store: Mem0MemoryStore,
+    mem0_provider_cassette: Cassette,
+) -> None:
     await memory_store.store_insight(
         user_id=42,
         insight="I prefer doing my morning run before breakfast.",
@@ -100,8 +103,8 @@ async def test_store_and_retrieve_real_memory(memory_store: Mem0MemoryStore, cas
     assert insights
     assert any("morning run" in insight.content.lower() for insight in insights)
     assert any(insight.category == "preference" for insight in insights)
-    assert any("/embeddings" in request.uri for request in cassette.requests)
-    assert any(request.uri.endswith("/chat/completions") for request in cassette.requests)
+    assert any("/embeddings" in request.uri for request in mem0_provider_cassette.requests)
+    assert any(request.uri.endswith("/chat/completions") for request in mem0_provider_cassette.requests)
 
 
 async def test_real_memory_is_isolated_by_user(
