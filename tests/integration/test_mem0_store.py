@@ -27,7 +27,6 @@ def mem0_provider_cassette(vcr_config: VCR, integration_test_settings) -> Genera
     APIs and overwrites the committed cassette. Otherwise it replays the
     cassette without recording, which is the default for CI.
     """
-    from tests.settings import IntegrationTestSettings
 
     cassette_path = Path(__file__).parent / "cassettes/test_mem0_store/test_store_and_retrieve_real_memory.yaml"
     record_mode = "all" if integration_test_settings.record_cassettes else "none"
