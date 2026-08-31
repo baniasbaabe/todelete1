@@ -179,8 +179,8 @@ jobs:
         run: |
           cd infra/live
           terragrunt run-all apply \
-            --terragrunt-non-interactive \
-            --terragrunt-exclude-dir postgres-firewall-deployer \
+            --non-interactive \
+            --exclude-dir postgres-firewall-deployer \
             -auto-approve
 
   # ---------- Application ----------
