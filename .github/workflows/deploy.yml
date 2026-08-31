@@ -281,6 +281,15 @@ jobs:
       - name: Bootstrap database roles
         run: ./scripts/bootstrap-db-roles.sh
 
+      - name: Restart Phoenix after role bootstrap
+        run: |
+          PHOENIX_APP=$(cd infra/live/phoenix && terragrunt output -raw phoenix_container_app_name)
+          REVISION=$(az containerapp revision list \
+            -g "$AZURE_RESOURCE_GROUP" -n "$PHOENIX_APP" \
+            --query '[0].name' -o tsv)
+          az containerapp revision restart \
+            -g "$AZURE_RESOURCE_GROUP" -n "$PHOENIX_APP" --revision "$REVISION"
+
       - name: Run migrations
         run: |
           PG_HOST=$(cd infra/live/postgres && terragrunt output -raw postgres_fqdn)
