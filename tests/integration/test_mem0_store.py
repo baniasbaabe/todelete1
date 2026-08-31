@@ -30,7 +30,12 @@ def mem0_provider_cassette(vcr_config: VCR, integration_test_settings) -> Genera
 
     cassette_path = Path(__file__).parent / "cassettes/test_mem0_store/test_store_and_retrieve_real_memory.yaml"
     record_mode = "all" if integration_test_settings.record_cassettes else "none"
-    with vcr_config.use_cassette(str(cassette_path), record_mode=record_mode) as recorded:
+    # Exclude body: mem0's internal Groq prompt varies across environments.
+    with vcr_config.use_cassette(
+        str(cassette_path),
+        record_mode=record_mode,
+        match_on=["method", "scheme", "host", "port", "path"],
+    ) as recorded:
         yield recorded
 
 
