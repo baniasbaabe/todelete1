@@ -8,6 +8,7 @@ Install these tools before starting:
 - [`tofu`](https://opentofu.org/docs/intro/install/) — OpenTofu (open-source Terraform)
 - [`terragrunt`](https://terragrunt.gruntwork.io/docs/getting-started/install/) — Terragrunt wrapper
 - [`docker`](https://docs.docker.com/engine/install/) — to build and push the container image
+- [`gh`](https://cli.github.com/) — GitHub CLI (used by bootstrap to fetch repo/owner IDs for OIDC)
 - [`psql`](https://www.postgresql.org/download/) — used by `bootstrap-db-roles.sh`
 - [`uv`](https://docs.astral.sh/uv/) — Python package manager (already required for local dev)
 - An Azure subscription with permission to create resource groups and Microsoft Entra applications
@@ -142,5 +143,7 @@ Destroys all Terragrunt-managed resources. The resource group itself is not dele
 **`bootstrap-db-roles.sh` fails with permission denied**: It must run as the PostgreSQL server admin (the credential in `DATABASE_URL`), not the `habit_app` runtime role.
 
 **Firewall blocks local `deploy-bot.sh`**: The script opens a firewall rule for your current public IP automatically, but corporate VPNs may change your IP mid-run. Disconnect from the VPN or run from a static IP.
+
+**Azure login fails with `AADSTS700213: No matching federated identity record`**: GitHub changed their OIDC token format to include numeric owner and repo IDs in the subject claim (e.g. `repo:owner@123/repo@456:environment:production`). Re-run `./scripts/bootstrap-azure-github.sh` -- it now fetches the IDs from the GitHub API and updates the existing federated credential automatically.
 
 **`bootstrap-azure-github.sh` fails with `Permission denied` on `bootstrap.sh`**: `bootstrap-azure-github.sh` shells out to `scripts/bootstrap.sh` to create the Terragrunt state storage account. If `bootstrap.sh` was checked in without the execute bit (common on Windows clones or fresh checkouts), the outer script aborts *after* creating the Entra app, federated credential, and role assignments but *before* creating the storage account. Fix with `chmod +x scripts/bootstrap.sh` and re-run. The script is now invoked via `bash` so a missing `+x` bit won't block the bootstrap. The Azure identity pieces are idempotent — re-running picks up where it left off, and `bootstrap.sh` itself detects an existing storage account and skips re-creation.

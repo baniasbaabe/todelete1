@@ -84,6 +84,20 @@ az role assignment create \
     --scope "$scope" \
     --output none
 
+# GitHub OIDC tokens include numeric owner and repo IDs in the subject claim
+# (e.g. repo:owner@123/repo@456:environment:production). Fetch them so the
+# federated credential matches what GitHub Actions actually sends.
+if ! command -v gh >/dev/null 2>&1; then
+    echo "GitHub CLI (gh) is required: https://cli.github.com/" >&2
+    exit 1
+fi
+
+owner="${repository%%/*}"
+repo_name="${repository##*/}"
+owner_id=$(gh api "users/${owner}" --jq '.id')
+repo_id=$(gh api "repos/${repository}" --jq '.id')
+oidc_subject="repo:${owner}@${owner_id}/${repo_name}@${repo_id}:environment:${github_environment}"
+
 credential_count=$(az ad app federated-credential list \
     --id "$application_id" \
     --query "[?name=='${federated_name}'] | length(@)" \
@@ -96,7 +110,7 @@ if [[ "$credential_count" == "0" ]]; then
 {
   "name": "${federated_name}",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:${repository}:environment:${github_environment}",
+  "subject": "${oidc_subject}",
   "description": "GitHub Actions ${github_environment} environment",
   "audiences": ["api://AzureADTokenExchange"]
 }
@@ -108,6 +122,23 @@ EOF
         --output none
 else
     echo "GitHub Actions federated credential already exists."
+    echo "Updating subject to match current GitHub OIDC format..."
+    credential_id=$(az ad app federated-credential list \
+        --id "$application_id" \
+        --query "[?name=='${federated_name}'].id | [0]" \
+        -o tsv)
+    update_file=$(mktemp)
+    trap 'rm -f "$update_file"' EXIT
+    cat > "$update_file" <<EOF
+{
+  "subject": "${oidc_subject}"
+}
+EOF
+    az ad app federated-credential update \
+        --id "$application_id" \
+        --federated-credential-id "$credential_id" \
+        --parameters "$update_file" \
+        --output none
 fi
 
 export AZURE_RESOURCE_GROUP="$resource_group"
