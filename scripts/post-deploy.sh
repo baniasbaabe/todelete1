@@ -65,6 +65,28 @@ if [ -n "$WEBAPP_NAME" ]; then
 fi
 echo ""
 
+# Ensure the current operator has Key Vault access. The Terragrunt module
+# grants it via OPERATOR_OBJECT_IDS, but on first deploy that variable may
+# not be set yet. Self-heal by granting the role if a probe read fails.
+echo "Checking Key Vault access..."
+if ! az keyvault secret show --vault-name "$KV_NAME" --name "phoenix-admin-password" --query "value" -o tsv &>/dev/null; then
+    echo -e "${YELLOW}No Key Vault access. Granting Key Vault Secrets Officer to your account...${NC}"
+    USER_OID=$(az ad signed-in-user show --query id -o tsv)
+    KV_ID=$(az keyvault show --name "$KV_NAME" --query id -o tsv)
+    az role assignment create \
+        --assignee-object-id "$USER_OID" \
+        --assignee-principal-type User \
+        --role "Key Vault Secrets Officer" \
+        --scope "$KV_ID" \
+        --output none
+    echo "Waiting for RBAC propagation..."
+    sleep 30
+    echo -e "${GREEN}✓ Key Vault access granted${NC}"
+else
+    echo -e "${GREEN}✓ Key Vault access confirmed${NC}"
+fi
+echo ""
+
 if [ "$SKIP_PHOENIX" == "true" ]; then
     echo -e "${YELLOW}Phoenix not deployed. Skipping Phoenix configuration.${NC}"
     echo ""

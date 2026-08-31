@@ -90,11 +90,12 @@ export AZURE_RESOURCE_GROUP=<resource-group>
 ```
 
 The script:
-1. Retrieves the Phoenix admin password from Key Vault
-2. Tells you to log in at the Phoenix URL with those credentials
-3. Prompts you to create an API key in Phoenix (**Settings → API Keys**)
-4. Stores the key in Key Vault
-5. Sets `ENABLE_TRACING=true` and `PHOENIX_API_KEY` on the Web App
+1. Checks Key Vault access and auto-grants `Key Vault Secrets Officer` to your Azure account if needed
+2. Retrieves the Phoenix admin password from Key Vault
+3. Tells you to log in at the Phoenix URL with those credentials
+4. Prompts you to create an API key in Phoenix (**Settings → API Keys**)
+5. Stores the key in Key Vault
+6. Sets `ENABLE_TRACING=true` and `PHOENIX_API_KEY` on the Web App
 
 Without this step the bot runs fine but sends no traces to Phoenix.
 
