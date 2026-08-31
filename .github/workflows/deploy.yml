@@ -178,10 +178,10 @@ jobs:
       - name: Apply all modules
         run: |
           cd infra/live
-          terragrunt run-all apply \
+          terragrunt run --all \
             --non-interactive \
-            --exclude-dir postgres-firewall-deployer \
-            -auto-approve
+            --queue-exclude-dir postgres-firewall-deployer \
+            -- apply
 
   # ---------- Application ----------
 
