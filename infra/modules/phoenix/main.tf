@@ -77,7 +77,7 @@ resource "azurerm_container_app" "phoenix" {
     }
 
     # Resource allocation (0.5 vCPU, 1 GiB RAM)
-    min_replicas = 0
+    min_replicas = 1
     max_replicas = 1
   }
 
