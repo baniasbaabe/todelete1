@@ -131,7 +131,7 @@ jobs:
       MEM0_EMBEDDING_DIMS: ${{ vars.MEM0_EMBEDDING_DIMS || '1024' }}
       MEM0_COLLECTION_NAME: ${{ vars.MEM0_COLLECTION_NAME || 'memories' }}
       OPERATOR_OBJECT_IDS: ${{ vars.OPERATOR_OBJECT_IDS }}
-      TERRAGRUNT_TFPATH: tofu
+      TG_TF_PATH: tofu
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -205,7 +205,7 @@ jobs:
       TFSTATE_STORAGE_ACCOUNT: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
       TFSTATE_CONTAINER: ${{ vars.TFSTATE_CONTAINER || 'tofu-state' }}
       PBKDF2_PASSPHRASE: ${{ secrets.PBKDF2_PASSPHRASE }}
-      TERRAGRUNT_TFPATH: tofu
+      TG_TF_PATH: tofu
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -264,8 +264,8 @@ jobs:
           RULE_NAME="gha-${{ github.run_id }}"
 
           az postgres flexible-server firewall-rule create \
-            -g "$AZURE_RESOURCE_GROUP" -n "$PG_SERVER" \
-            --rule-name "$RULE_NAME" \
+            -g "$AZURE_RESOURCE_GROUP" -s "$PG_SERVER" \
+            --name "$RULE_NAME" \
             --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
 
           echo "pg_server=$PG_SERVER" >> "$GITHUB_OUTPUT"
@@ -320,8 +320,8 @@ jobs:
         run: |
           az postgres flexible-server firewall-rule delete \
             -g "$AZURE_RESOURCE_GROUP" \
-            -n "${{ steps.firewall.outputs.pg_server }}" \
-            --rule-name "${{ steps.firewall.outputs.rule_name }}" \
+            -s "${{ steps.firewall.outputs.pg_server }}" \
+            --name "${{ steps.firewall.outputs.rule_name }}" \
             --yes 2>/dev/null || true
 
       - name: Publish deployment summary
