@@ -306,6 +306,7 @@ jobs:
 
           export DATABASE_URL="postgresql://${PG_USER}:${PG_PASS}@${PG_HOST}:5432/${PG_DATABASE}"
           export PGSSLMODE=verify-full
+          export PGSSLROOTCERT=system
 
           uv sync --frozen
           ./scripts/run-migrations.sh
