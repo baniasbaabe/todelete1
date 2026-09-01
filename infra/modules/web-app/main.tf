@@ -8,13 +8,6 @@ locals {
   webhook_url = trimspace(var.webhook_url) != "" ? trimsuffix(var.webhook_url, "/") : (
     "https://${local.web_app_name}.azurewebsites.net"
   )
-  runtime_secret_scopes = {
-    database = azurerm_key_vault_secret.database_url.resource_versionless_id
-    groq     = var.groq_key_secret_resource_id
-    jina     = var.jina_key_secret_resource_id
-    telegram = var.telegram_token_secret_resource_id
-    webhook  = var.webhook_secret_resource_id
-  }
 }
 
 # Random suffix for unique names
@@ -135,13 +128,11 @@ resource "azurerm_key_vault_secret" "database_url" {
   key_vault_id = data.azurerm_key_vault.main.id
 }
 
-# Grant the Web App access only to the five secrets it consumes. In particular,
-# the identity cannot read the PostgreSQL server-admin or Phoenix credentials
-# stored in the same vault.
+# Grant the Web App read access to all secrets in the vault. post-deploy.sh
+# adds phoenix-api-key after the initial infra deploy, so per-secret scopes
+# would miss it and cause AccessToKeyVaultDenied at runtime.
 resource "azurerm_role_assignment" "webapp_secret_reader" {
-  for_each = local.runtime_secret_scopes
-
-  scope                = each.value
+  scope                = data.azurerm_key_vault.main.id
   role_definition_name = "Key Vault Secrets User"
   principal_id         = azurerm_linux_web_app.main.identity[0].principal_id
 }

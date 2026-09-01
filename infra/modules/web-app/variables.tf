@@ -31,18 +31,8 @@ variable "telegram_token_secret_uri" {
   type        = string
 }
 
-variable "telegram_token_secret_resource_id" {
-  description = "Azure resource ID for the Telegram bot token secret"
-  type        = string
-}
-
 variable "groq_key_secret_uri" {
   description = "Key Vault secret URI for Groq API key"
-  type        = string
-}
-
-variable "groq_key_secret_resource_id" {
-  description = "Azure resource ID for the Groq API key secret"
   type        = string
 }
 
@@ -51,18 +41,8 @@ variable "jina_key_secret_uri" {
   type        = string
 }
 
-variable "jina_key_secret_resource_id" {
-  description = "Azure resource ID for the Jina AI API key secret"
-  type        = string
-}
-
 variable "webhook_secret_uri" {
   description = "Key Vault secret URI for webhook secret"
-  type        = string
-}
-
-variable "webhook_secret_resource_id" {
-  description = "Azure resource ID for the Telegram webhook secret"
   type        = string
 }
 

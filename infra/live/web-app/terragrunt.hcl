@@ -36,13 +36,9 @@ inputs = {
   # Key Vault
   keyvault_name             = dependency.keyvault.outputs.keyvault_name
   telegram_token_secret_uri = dependency.keyvault.outputs.telegram_token_secret_uri
-  telegram_token_secret_resource_id = dependency.keyvault.outputs.telegram_token_secret_resource_id
   groq_key_secret_uri       = dependency.keyvault.outputs.groq_key_secret_uri
-  groq_key_secret_resource_id = dependency.keyvault.outputs.groq_key_secret_resource_id
   jina_key_secret_uri       = dependency.keyvault.outputs.jina_key_secret_uri
-  jina_key_secret_resource_id = dependency.keyvault.outputs.jina_key_secret_resource_id
   webhook_secret_uri        = dependency.keyvault.outputs.webhook_secret_uri
-  webhook_secret_resource_id = dependency.keyvault.outputs.webhook_secret_resource_id
 
   # LLM Configuration (from environment variables)
   llm_model       = get_env("LLM_MODEL", "qwen/qwen3.6-27b")
