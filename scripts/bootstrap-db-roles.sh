@@ -93,8 +93,9 @@ END
 $$;
 SQL
 
-run_sql "postgres" --set phoenix_pw="$PHOENIX_DB_PASSWORD" \
-    --command "ALTER ROLE phoenix_app WITH LOGIN PASSWORD :'phoenix_pw';"
+run_sql "postgres" --set phoenix_pw="$PHOENIX_DB_PASSWORD" <<'SQL'
+ALTER ROLE phoenix_app WITH LOGIN PASSWORD :'phoenix_pw';
+SQL
 
 echo "Granting phoenix_app access to the '$PHOENIX_DB' database only..."
 run_sql "postgres" <<SQL
@@ -132,8 +133,9 @@ END
 $$;
 SQL
 
-run_sql "postgres" --set habit_app_pw="$HABIT_APP_PASSWORD" \
-    --command "ALTER ROLE habit_app WITH LOGIN PASSWORD :'habit_app_pw';"
+run_sql "postgres" --set habit_app_pw="$HABIT_APP_PASSWORD" <<'SQL'
+ALTER ROLE habit_app WITH LOGIN PASSWORD :'habit_app_pw';
+SQL
 
 echo "Granting habit_app access to the '$APP_DB' database only..."
 run_sql "postgres" <<SQL
