@@ -62,7 +62,10 @@ HABIT_APP_PASSWORD=$(az keyvault secret show --vault-name "$KV_NAME" \
 export PGPASSWORD
 
 # Authenticate the server, do not merely encrypt the channel.
+# Use the OS CA bundle so this works on GitHub Actions runners and other
+# environments that lack ~/.postgresql/root.crt.
 export PGSSLMODE=verify-full
+export PGSSLROOTCERT=system
 
 run_sql() {
     local database="$1"
