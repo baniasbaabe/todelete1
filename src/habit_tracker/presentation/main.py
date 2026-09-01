@@ -108,6 +108,7 @@ def main() -> None:
         app.run_webhook(
             listen="0.0.0.0",
             port=8443,
+            url_path="webhook",
             webhook_url=f"{settings.webhook_url}/webhook",
             secret_token=settings.webhook_secret,
         )
