@@ -54,19 +54,9 @@ output "telegram_token_secret_uri" {
   value       = azurerm_key_vault_secret.telegram_token.versionless_id
 }
 
-output "telegram_token_secret_resource_id" {
-  description = "Azure resource ID for the Telegram bot token secret"
-  value       = azurerm_key_vault_secret.telegram_token.resource_versionless_id
-}
-
 output "groq_key_secret_uri" {
   description = "Key Vault secret URI for Groq API key"
   value       = azurerm_key_vault_secret.groq_key.versionless_id
-}
-
-output "groq_key_secret_resource_id" {
-  description = "Azure resource ID for the Groq API key secret"
-  value       = azurerm_key_vault_secret.groq_key.resource_versionless_id
 }
 
 output "jina_key_secret_uri" {
@@ -74,19 +64,14 @@ output "jina_key_secret_uri" {
   value       = azurerm_key_vault_secret.jina_key.versionless_id
 }
 
-output "jina_key_secret_resource_id" {
-  description = "Azure resource ID for the Jina AI API key secret"
-  value       = azurerm_key_vault_secret.jina_key.resource_versionless_id
-}
-
 output "webhook_secret_uri" {
   description = "Key Vault secret URI for webhook secret"
   value       = azurerm_key_vault_secret.webhook_secret.versionless_id
 }
 
-output "webhook_secret_resource_id" {
-  description = "Azure resource ID for the Telegram webhook secret"
-  value       = azurerm_key_vault_secret.webhook_secret.resource_versionless_id
+output "phoenix_api_key_secret_uri" {
+  description = "Key Vault secret URI for Phoenix API key"
+  value       = azurerm_key_vault_secret.phoenix_api_key.versionless_id
 }
 
 output "phoenix_secret_value" {

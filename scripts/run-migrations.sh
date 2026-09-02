@@ -27,6 +27,12 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo -e "${GREEN}✓ DATABASE_URL is set${NC}"
+
+# psycopg2-binary bundles its own libpq/OpenSSL and does not honour
+# PGSSLROOTCERT=system. Default to the Debian/Ubuntu CA bundle when the caller
+# has not already set the variable.
+export PGSSLROOTCERT="${PGSSLROOTCERT:-/etc/ssl/certs/ca-certificates.crt}"
+
 echo ""
 
 # Get the directory where this script is located

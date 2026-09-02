@@ -56,7 +56,7 @@ resource "azurerm_linux_web_app" "main" {
 
     # Container configuration - pull from ACR
     application_stack {
-      docker_image_name   = "${var.acr_login_server}/${var.docker_image_name}:${var.docker_image_tag}"
+      docker_image_name   = "${var.docker_image_name}:${var.docker_image_tag}"
       docker_registry_url = "https://${var.acr_login_server}"
     }
 
@@ -90,7 +90,8 @@ resource "azurerm_linux_web_app" "main" {
 
     # Phoenix / Observability Configuration
     COLLECTOR_ENDPOINT = var.phoenix_collector_endpoint
-    ENABLE_TRACING     = "false"
+    ENABLE_TRACING     = var.enable_tracing
+    PHOENIX_API_KEY    = "@Microsoft.KeyVault(SecretUri=${var.phoenix_api_key_secret_uri})"
 
     # Python Configuration
     PYTHONUNBUFFERED = "1"

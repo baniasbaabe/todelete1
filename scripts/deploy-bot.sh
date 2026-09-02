@@ -49,7 +49,7 @@ if [ -z "$RESOURCE_GROUP" ]; then
 fi
 
 # Find ACR
-ACR_NAME=$(az acr list --resource-group "$RESOURCE_GROUP" --query "[?contains(name, 'testrepo')].name | [0]" -o tsv 2>/dev/null)
+ACR_NAME=$(az acr list --resource-group "$RESOURCE_GROUP" --query "[0].name" -o tsv 2>/dev/null)
 
 if [ -z "$ACR_NAME" ]; then
     echo -e "${RED}ERROR: Azure Container Registry not found in resource group $RESOURCE_GROUP${NC}"
@@ -61,7 +61,7 @@ fi
 ACR_LOGIN=$(az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --query "loginServer" -o tsv 2>/dev/null)
 
 # Find Web App
-WEBAPP_NAME=$(az webapp list --resource-group "$RESOURCE_GROUP" --query "[?contains(name, 'testrepo-bot-')].name | [0]" -o tsv 2>/dev/null)
+WEBAPP_NAME=$(az webapp list --resource-group "$RESOURCE_GROUP" --query "[0].name" -o tsv 2>/dev/null)
 
 if [ -z "$WEBAPP_NAME" ]; then
     echo -e "${RED}ERROR: Web App not found in resource group $RESOURCE_GROUP${NC}"
@@ -91,7 +91,7 @@ echo "========================================="
 # failure costs nothing: no image has been built or pushed yet.
 
 PG_SERVER=$(az postgres flexible-server list --resource-group "$RESOURCE_GROUP" \
-    --query "[?starts_with(name, 'testrepo-pg-')].name | [0]" -o tsv 2>/dev/null)
+    --query "[0].name" -o tsv 2>/dev/null)
 
 if [ -z "$PG_SERVER" ]; then
     echo -e "${RED}ERROR: PostgreSQL flexible server not found in resource group $RESOURCE_GROUP${NC}"
@@ -105,7 +105,7 @@ POSTGRES_USER=$(az postgres flexible-server show --resource-group "$RESOURCE_GRO
     --name "$PG_SERVER" --query "administratorLogin" -o tsv)
 
 KV_NAME=$(az keyvault list --resource-group "$RESOURCE_GROUP" \
-    --query "[?starts_with(name, 'testrepo-kv-')].name | [0]" -o tsv 2>/dev/null)
+    --query "[0].name" -o tsv 2>/dev/null)
 
 if [ -z "$KV_NAME" ]; then
     echo -e "${RED}ERROR: Key Vault not found in resource group $RESOURCE_GROUP${NC}"
@@ -126,6 +126,15 @@ fi
 # authenticates the server certificate and hostname, sslmode=require would not.
 export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/habit_tracker"
 export PGSSLMODE=verify-full
+# psycopg2-binary bundles its own libpq and does not support PGSSLROOTCERT=system.
+# Use the explicit CA bundle path; fall back to system for macOS / other distros.
+if [ -f "/etc/ssl/certs/ca-certificates.crt" ]; then
+    export PGSSLROOTCERT="/etc/ssl/certs/ca-certificates.crt"
+elif [ -f "/etc/pki/tls/certs/ca-bundle.crt" ]; then
+    export PGSSLROOTCERT="/etc/pki/tls/certs/ca-bundle.crt"
+else
+    export PGSSLROOTCERT=system
+fi
 
 if ! "$SCRIPT_DIR/run-migrations.sh"; then
     echo ""

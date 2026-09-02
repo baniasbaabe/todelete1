@@ -15,8 +15,8 @@ locals {
     Repository  = "ai-habit-bot"
   }
 
-  # Naming convention (no prefix, user wants clean names)
-  name_prefix = "testrepo"
+  # Naming convention: override with NAME_PREFIX env var (defaults to "habitbot")
+  name_prefix = get_env("NAME_PREFIX", "habitbot")
 }
 
 # Remote state configuration with PBKDF2 encryption

@@ -234,6 +234,13 @@ POSTGRES_PASSWORD=$(az keyvault secret show --vault-name "$KV_NAME" --name "post
 # hostname, where sslmode=require would encrypt without verifying either.
 export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}"
 export PGSSLMODE=verify-full
+if [ -f "/etc/ssl/certs/ca-certificates.crt" ]; then
+    export PGSSLROOTCERT="/etc/ssl/certs/ca-certificates.crt"
+elif [ -f "/etc/pki/tls/certs/ca-bundle.crt" ]; then
+    export PGSSLROOTCERT="/etc/pki/tls/certs/ca-bundle.crt"
+else
+    export PGSSLROOTCERT=system
+fi
 
 # Run migrations
 "$SCRIPT_DIR/run-migrations.sh"

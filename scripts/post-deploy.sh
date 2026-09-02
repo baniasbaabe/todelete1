@@ -33,13 +33,13 @@ echo "Retrieving deployment information from Azure..."
 echo ""
 
 # Find Key Vault (starts with name prefix)
-KV_NAME=$(az keyvault list --resource-group "$RESOURCE_GROUP" --query "[?starts_with(name, 'testrepo-kv-')].name | [0]" -o tsv 2>/dev/null)
+KV_NAME=$(az keyvault list --resource-group "$RESOURCE_GROUP" --query "[0].name" -o tsv 2>/dev/null)
 
 # Find Phoenix Container App
 PHOENIX_APP=$(az containerapp list --resource-group "$RESOURCE_GROUP" --query "[?contains(name, 'phoenix')].name | [0]" -o tsv 2>/dev/null)
 
 # Find Web App
-WEBAPP_NAME=$(az webapp list --resource-group "$RESOURCE_GROUP" --query "[?contains(name, 'testrepo-bot-')].name | [0]" -o tsv 2>/dev/null)
+WEBAPP_NAME=$(az webapp list --resource-group "$RESOURCE_GROUP" --query "[0].name" -o tsv 2>/dev/null)
 
 if [ -z "$KV_NAME" ]; then
     echo -e "${RED}ERROR: Could not find Key Vault in resource group $RESOURCE_GROUP${NC}"
@@ -156,24 +156,8 @@ else
         --output none
 
     if [ -n "$WEBAPP_NAME" ]; then
-        echo "Ensuring Web App can read Key Vault secrets..."
-        WEBAPP_IDENTITY=$(az webapp identity show --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --query principalId -o tsv)
-        KV_ID=$(az keyvault show --name "$KV_NAME" --query id -o tsv)
-        az role assignment create \
-            --assignee-object-id "$WEBAPP_IDENTITY" \
-            --assignee-principal-type ServicePrincipal \
-            --role "Key Vault Secrets User" \
-            --scope "$KV_ID" \
-            --output none 2>/dev/null || true
-
-        echo "Enabling authenticated Phoenix tracing on the Web App..."
-        az webapp config appsettings set \
-            --name "$WEBAPP_NAME" \
-            --resource-group "$RESOURCE_GROUP" \
-            --settings \
-                ENABLE_TRACING=true \
-                PHOENIX_API_KEY="@Microsoft.KeyVault(SecretUri=https://${KV_NAME}.vault.azure.net/secrets/phoenix-api-key)" \
-            --output none
+        echo "Web App picks up PHOENIX_API_KEY and ENABLE_TRACING from Terraform."
+        echo "The KV secret was just updated; restarting the Web App to resolve it."
     fi
     
     echo -e "${GREEN}✓ Phoenix API key stored in Key Vault${NC}"

@@ -57,6 +57,7 @@ inputs = {
 
   # Phoenix
   phoenix_collector_endpoint = dependency.phoenix.outputs.phoenix_collector_endpoint
+  phoenix_api_key_secret_uri = dependency.keyvault.outputs.phoenix_api_key_secret_uri
 
   # Azure Container Registry
   acr_id            = dependency.acr.outputs.acr_id

@@ -60,6 +60,7 @@ The script:
 | `MEM0_EMBEDDING_DIMS` | `1024` |
 | `MEM0_COLLECTION_NAME` | `memories` |
 | `OPERATOR_OBJECT_IDS` | printed by bootstrap (your Azure AD object ID; comma-separate for multiple operators) |
+| `NAME_PREFIX` | short slug used to name all Azure resources (default: `habitbot`). **Every resource is prefixed with this value** — changing it after the first deploy creates duplicate resources instead of updating existing ones. Pick a value before the first deploy and keep it. |
 
 ---
 
@@ -153,5 +154,9 @@ Destroys all Terragrunt-managed resources. The resource group itself is not dele
 **Azure login fails with `AADSTS700213: No matching federated identity record`**: GitHub changed their OIDC token format to include numeric owner and repo IDs in the subject claim (e.g. `repo:owner@123/repo@456:environment:production`). Re-run `./scripts/bootstrap-azure-github.sh` -- it now fetches the IDs from the GitHub API and updates the existing federated credential automatically.
 
 **Lost `PBKDF2_PASSPHRASE`**: CI still works (the secret is set in GitHub), but you cannot run Terragrunt locally. Generate a new passphrase, update the GitHub secret, and run a full infra deploy to re-encrypt state. Store the passphrase in a password manager.
+
+**Alembic/psycopg2 fails with `SSL error: certificate verify failed`**: `psycopg2-binary` bundles its own libpq and does not honour `PGSSLROOTCERT=system`. Set `export PGSSLROOTCERT=/etc/ssl/certs/ca-certificates.crt` (Debian/Ubuntu path) before running migrations. The deploy scripts now do this automatically.
+
+**`psql` ALTER ROLE fails with syntax error (`:variable`)**: psql's `:'var'` interpolation only works when reading from stdin, not with `--command`/`-c`. Use a heredoc instead.
 
 **`bootstrap-azure-github.sh` fails with `Permission denied` on `bootstrap.sh`**: `bootstrap-azure-github.sh` shells out to `scripts/bootstrap.sh` to create the Terragrunt state storage account. If `bootstrap.sh` was checked in without the execute bit (common on Windows clones or fresh checkouts), the outer script aborts *after* creating the Entra app, federated credential, and role assignments but *before* creating the storage account. Fix with `chmod +x scripts/bootstrap.sh` and re-run. The script is now invoked via `bash` so a missing `+x` bit won't block the bootstrap. The Azure identity pieces are idempotent — re-running picks up where it left off, and `bootstrap.sh` itself detects an existing storage account and skips re-creation.

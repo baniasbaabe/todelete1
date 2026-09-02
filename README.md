@@ -118,8 +118,15 @@ az account set --subscription "<subscription ID or name>"
 
 The script creates the resource group, GitHub OIDC identity, and encrypted state
 storage. It prints the generated Azure IDs, state settings, and the remaining
-secrets to add to the GitHub `production` environment. After adding them, open
-**Actions -> Deploy -> Run workflow** and leave both deployment options enabled.
+secrets to add to the GitHub `production` environment.
+
+Also add the `NAME_PREFIX` **variable** (not secret) in the same `production`
+environment. Every Azure resource is prefixed with this value (default:
+`habitbot`). Pick a short slug before the first deploy and keep it — changing it
+later creates duplicate resources instead of updating existing ones.
+
+After adding secrets and variables, open **Actions -> Deploy -> Run workflow**
+and leave both deployment options enabled.
 
 Terragrunt then creates ACR, Key Vault, PostgreSQL, Phoenix, and the Web App.
 Future pushes to `main` deploy only the paths that changed.

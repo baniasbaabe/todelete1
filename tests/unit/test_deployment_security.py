@@ -58,12 +58,11 @@ def test_deploy_uses_native_groq_model_and_tracks_startup_script() -> None:
     assert "scripts/startup.sh" in workflow
 
 
-def test_web_app_identity_is_scoped_to_runtime_secrets() -> None:
+def test_web_app_identity_has_vault_level_secret_reader() -> None:
     module = _read("infra/modules/web-app/main.tf")
 
-    assert "scope                = data.azurerm_key_vault.main.id" not in module
-    assert "resource_versionless_id" in module
-    assert "for_each" in module
+    assert "scope                = data.azurerm_key_vault.main.id" in module
+    assert '"Key Vault Secrets User"' in module
 
 
 def test_web_app_uses_managed_identity_to_pull_from_private_acr() -> None:

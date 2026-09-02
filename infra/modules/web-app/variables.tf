@@ -99,6 +99,17 @@ variable "phoenix_collector_endpoint" {
   type        = string
 }
 
+variable "phoenix_api_key_secret_uri" {
+  description = "Key Vault secret URI for Phoenix API key"
+  type        = string
+}
+
+variable "enable_tracing" {
+  description = "Enable OpenTelemetry tracing to Phoenix"
+  type        = string
+  default     = "true"
+}
+
 # Azure Container Registry Configuration
 
 variable "acr_id" {

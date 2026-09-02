@@ -175,8 +175,21 @@ resource "azurerm_key_vault_secret" "phoenix_admin_password" {
   depends_on = [azurerm_role_assignment.terraform_kv_admin]
 }
 
-# Note: phoenix-api-key will be created manually after Phoenix deployment
-# via post-deploy.sh script
+# Placeholder for the Phoenix API key. post-deploy.sh updates this secret's
+# value after the operator creates a key in the Phoenix UI. Having the secret
+# in Terraform means the Web App's KV reference resolves on every apply and
+# the app_settings map never drifts.
+resource "azurerm_key_vault_secret" "phoenix_api_key" {
+  name         = "phoenix-api-key"
+  value        = "PLACEHOLDER-run-post-deploy-sh"
+  key_vault_id = azurerm_key_vault.main.id
+
+  depends_on = [azurerm_role_assignment.terraform_kv_admin]
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
 
 resource "azurerm_monitor_diagnostic_setting" "keyvault" {
   name                       = "${var.name_prefix}-kv-diag"
