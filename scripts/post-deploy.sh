@@ -156,6 +156,16 @@ else
         --output none
 
     if [ -n "$WEBAPP_NAME" ]; then
+        echo "Ensuring Web App can read Key Vault secrets..."
+        WEBAPP_IDENTITY=$(az webapp identity show --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --query principalId -o tsv)
+        KV_ID=$(az keyvault show --name "$KV_NAME" --query id -o tsv)
+        az role assignment create \
+            --assignee-object-id "$WEBAPP_IDENTITY" \
+            --assignee-principal-type ServicePrincipal \
+            --role "Key Vault Secrets User" \
+            --scope "$KV_ID" \
+            --output none 2>/dev/null || true
+
         echo "Enabling authenticated Phoenix tracing on the Web App..."
         az webapp config appsettings set \
             --name "$WEBAPP_NAME" \
