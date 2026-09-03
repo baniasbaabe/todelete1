@@ -128,12 +128,28 @@ To force a full redeploy without a code change, trigger the workflow manually fr
 
 ## Tearing down
 
+### Destroy the application resources
+
 ```bash
 export AZURE_RESOURCE_GROUP=<resource-group>
 ./scripts/destroy.sh
 ```
 
-Destroys all Terragrunt-managed resources. The resource group itself is not deleted (remove it manually with `az group delete` if needed).
+Destroys all Terragrunt-managed resources (ACR, Key Vault, PostgreSQL, Phoenix, Web App, App Service Plan, Log Analytics).
+
+### Delete the resource group (catches anything Terragrunt missed)
+
+```bash
+az group delete --name "$AZURE_RESOURCE_GROUP" --yes --no-wait
+```
+
+### Clean up the GitHub side (optional — only if you want a full reset)
+
+1. **Settings → Environments → production → Delete environment.** Removes every GitHub secret and variable at once.
+2. **Microsoft Entra → App registrations → delete the `<repo>-github-deploy` app.** Removes the OIDC identity and federated credential.
+3. **Storage account** holding the Terragrunt state: `az storage account delete --name <account> --resource-group <state-rg> --yes`.
+
+If you only deleted the application resources but kept the environment and OIDC identity, you can redeploy without re-running `./scripts/bootstrap-azure-github.sh`. If you deleted everything, follow Phase 0 again.
 
 ---
 
